@@ -13,7 +13,7 @@ Made for **WoW Forever** (Interface 16001) played with a gamepad.
   - the compact gamepad bar at the bottom;
   - the player and target frames either side of the character, with the cooldown rows centred
     between them;
-  - the chat in the bottom-left corner, without its tabs, its input line above it while you type;
+  - the chat in the bottom-left corner, without its tabs, its input line over its top while you type;
   - the gamepad help in the top-left corner;
   - a square minimap in the bottom-right corner, with a tooltip-style border;
   - the game's tooltip in the top-right corner (the quests fade under it).

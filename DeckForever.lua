@@ -64,7 +64,7 @@ local LAYOUT = {
 	-- the screen's)
 	-- (its background reaches 6 below it, 2 left of it: that background M from the edges, over the XP bar)
 	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = B + 6,
-		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 1, HeightTensAndOnes = 91 } },
+		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 2, HeightTensAndOnes = 20 } },
 	{ system = "CooldownViewer", index = 4, point = "TOPLEFT", relativePoint = "TOPLEFT", x = M, y = -(M + 150 + M) },
 	-- (test: the minimap and the game's tooltip swapped) bottom-right: the minimap M from the corner
 	-- (273 wide, 284 tall with its zone header). Top-right: the tooltip's corner (it grows down over
@@ -702,13 +702,14 @@ local function PlaceChat()
 			UnclampChat()
 			chat:ClearAllPoints()
 			chat:SetPoint(entry.point, UIParent, entry.relativePoint, entry.x, entry.y)
-			-- the line you type in over the chat, not under it (its box from 8 to the XP bar - 8, its top on the
-			-- minimap header's)
+			-- the line you type in over the chat's top lines while you type (its box on the chat's background
+			-- edges), above the chat's text (a higher strata)
 			local box = _G.ChatFrame1EditBox
 			if box and not box:IsForbidden() then
 				box:ClearAllPoints()
-				box:SetPoint("BOTTOMLEFT", chat, "TOPLEFT", -7, 3)
-				box:SetPoint("BOTTOMRIGHT", chat, "TOPRIGHT", 19, 3)
+				box:SetPoint("TOPLEFT", chat, "TOPLEFT", -7, 5)
+				box:SetPoint("TOPRIGHT", chat, "TOPRIGHT", 19, 5)
+				box:SetFrameStrata("MEDIUM")
 			end
 		end
 	end

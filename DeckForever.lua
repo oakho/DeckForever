@@ -265,6 +265,7 @@ local FADE_TIME = 0.25
 local IN_COMBAT_ALPHA = 0.3           -- the non-essentials, in combat
 local CALM_ALPHA = 0.35               -- the fight's frames, out of combat
 local QUESTS_UNDER_TIP = 0.25         -- the quests, under the tooltip at its default place
+local CHAT_ALPHA = 0.65               -- the chat's messages
 
 local forceFight                -- /df combat: shown as in combat, to see the fades (display only)
 local function Fighting() return forceFight or InCombatLockdown() or UnitAffectingCombat("player") end
@@ -284,6 +285,11 @@ local FADED = {
 	-- rule: in combat or with a target; these aren't protected, so faded from here, eased)
 	-- the chat's tabs and the minimap's addons list: never (HideChatTabs, PlaceMinimap)
 	AddonCompartmentFrame = function() return 0 end,
+	-- the chat's messages, as quiet as the quests; fully while you type (the line you type in is its child)
+	ChatFrame1 = function(frame)
+		local box = _G.ChatFrame1EditBox
+		return box and box:HasFocus() and 1 or CHAT_ALPHA
+	end,
 	-- the line you type in: only while you type (the gamepad UI keeps it shown, at 35 %, all the time)
 	ChatFrame1EditBox = function(box) return box:HasFocus() and 1 or 0 end,
 	EssentialCooldownViewer = function() return (Fighting() or UnitExists("target")) and 1 or CALM_ALPHA end,

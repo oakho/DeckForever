@@ -286,6 +286,8 @@ local FADED = {
 	end,
 	-- the cooldown rows between the unit frames, with the player frame and the bars (as CalmDriver's
 	-- rule: in combat or with a target; these aren't protected, so faded from here, eased)
+	-- the line you type in: only while you type (the gamepad UI keeps it shown, at 35 %, all the time)
+	ChatFrame1EditBox = function(box) return box:HasFocus() and 1 or 0 end,
 	EssentialCooldownViewer = function() return (Fighting() or UnitExists("target")) and 1 or CALM_ALPHA end,
 	UtilityCooldownViewer = function() return (Fighting() or UnitExists("target")) and 1 or CALM_ALPHA end,
 }
@@ -382,6 +384,36 @@ centreFrame:SetScript("OnUpdate", function(_, elapsed)
 	centreWait = 0.2
 	CentreCooldowns()
 end)
+
+-- The line you type in, with the game's tooltip look (as the gamepad help and the minimap): its own
+-- art made invisible (alpha only: Blizzard shows and hides its pieces as it gets and loses the focus),
+-- a tooltip backdrop behind it (a plain frame: not protected)
+local EDIT_ART = { "Left", "Mid", "Right", "FocusLeft", "FocusMid", "FocusRight" }
+local editSkinned
+local function SkinEditBox()
+	local box = _G.ChatFrame1EditBox
+	if editSkinned or not box or box:IsForbidden() then return end
+	editSkinned = true
+	for _, piece in ipairs(EDIT_ART) do
+		local tex = _G["ChatFrame1EditBox" .. piece]
+		if tex then tex:SetAlpha(0) end
+	end
+	local back = CreateFrame("Frame", nil, box, "TooltipBackdropTemplate")
+	back:SetPoint("TOPLEFT", box, "TOPLEFT", 3, -3)
+	back:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -3, 3)
+	back:SetFrameLevel(math.max(0, box:GetFrameLevel() - 1))
+end
+
+-- The unit frames' health and power shown as numbers (the game's own option, Status Text): set once,
+-- with the layout, if it's off; turned back on the Options page as any other setting
+local function StatusText()
+	if DeckForeverDB.statusTextSet or InCombatLockdown() then return end
+	DeckForeverDB.statusTextSet = true
+	if GetCVar("statusTextDisplay") == "NONE" then
+		SetCVar("statusTextDisplay", "NUMERIC")
+		SetCVar("statusText", "1")
+	end
+end
 
 local function FindLayout(layouts, name)
 	for i, layout in ipairs(layouts) do
@@ -607,7 +639,11 @@ f:SetScript("OnEvent", function(_, event, name)
 			and layout.layoutType ~= Enum.EditModeLayoutType.Preset or false
 	end
 	HookTooltip()
-	if oursActive then CalmDriver() end
+	if oursActive then
+		CalmDriver()
+		SkinEditBox()
+		StatusText()
+	end
 	SquareMinimap()
 	PlaceMinimap()
 	if C_EditMode and EditModePresetLayoutManager then pcall(PlaceChat) end

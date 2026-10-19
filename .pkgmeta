@@ -1,0 +1,5 @@
+package-as: DeckForever
+
+ignore:
+  - README.md
+  - .pkgmeta

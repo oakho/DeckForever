@@ -3,6 +3,9 @@
 ## Notes: An interface made for the Steam Deck's screen, on top of the gamepad UI and addons like Easy Controller. /df
 ## Notes-frFR: Une interface faite pour l'écran du Steam Deck, par-dessus l'interface manette et des addons comme Easy Controller. /df
 ## Version: 0.1.0
+## Author: oakho
+## X-Website: https://github.com/oakho/DeckForever
+## X-License: MIT
 ## OptionalDeps: EasyController
 ## SavedVariables: DeckForeverDB
 

@@ -5,15 +5,17 @@
 -- Blizzard method is replaced and no binding is touched.
 --   * the gamepad help redrawn for the Deck, bottom-left (Legend.lua)
 --   * the class action (a paladin's aura) under the middle of the compact bar
---   * /df go: the Edit Mode layout "DeckForever", a copy of "SteamDeck" with the systems
+--   * /df go: the Edit Mode layout "DeckForever", a copy of the one in use with the systems
 --     below moved, saved through C_EditMode and made active. The other layouts are left as
 --     they are; the layouts as they were first found are kept in DeckForeverDB.backup.
---   * /df back: the "SteamDeck" layout active again.
+--   * /df back: the layout it was copied from active again. /df fx: a look at the combat fades.
 -- Positions are in UIParent units, which on the Deck (scale 0.96) are its screen pixels.
 --------------------------------------------------------------------------------
 
 -- (the gamepad help: Legend.lua)
 
+-- the layout DeckForever's is copied from: one named so if there is one, else the one in use (unless it's
+-- ours), else the game's Gamepad layout; /df back goes back to it
 local SOURCE_LAYOUT = "SteamDeck"
 local TARGET_LAYOUT = "DeckForever"
 local OLD_LAYOUTS = { ["SteamDeck B"] = true }  -- earlier names of ours, removed as it's saved
@@ -447,10 +449,16 @@ local function Apply()
 	if not EditModeReady() then return end
 	local layouts, active, gamepadPreset, saved = Layouts()
 	local _, source = FindLayout(layouts, SOURCE_LAYOUT)
-	if not source then Print(("disposition « %s » introuvable."):format(SOURCE_LAYOUT)) return end
+	if not source then
+		local current = layouts[active]
+		if current and current.layoutName ~= TARGET_LAYOUT then source = current else source = gamepadPreset end
+	end
+	if not source then Print("aucune disposition de départ trouvée.") return end
 	DeckForeverDB.backup = DeckForeverDB.backup or CopyTable(saved)
+	DeckForeverDB.previous = source.layoutName
 
 	local layout = CopyTable(source)
+	if layout.layoutType == Enum.EditModeLayoutType.Preset then layout.layoutType = Enum.EditModeLayoutType.Account end
 	layout.layoutName = TARGET_LAYOUT
 	local moved, missing = 0, {}
 	for _, entry in ipairs(LAYOUT) do
@@ -541,9 +549,16 @@ end
 
 local function Back()
 	if not EditModeReady() then return end
-	local index = FindLayout((Layouts()), SOURCE_LAYOUT)
-	if not index then Print(("disposition « %s » introuvable."):format(SOURCE_LAYOUT)) return end
-	Activate(index, SOURCE_LAYOUT)
+	local layouts, _, gamepadPreset = Layouts()
+	local name = DeckForeverDB.previous or SOURCE_LAYOUT
+	local index = FindLayout(layouts, name)
+	if not index and gamepadPreset then
+		for i, layout in ipairs(layouts) do
+			if layout == gamepadPreset then index, name = i, layout.layoutName end
+		end
+	end
+	if not index then Print(("disposition « %s » introuvable."):format(name)) return end
+	Activate(index, name)
 end
 
 SLASH_DECKFOREVER1, SLASH_DECKFOREVER2 = "/df", "/deckforever"
@@ -557,7 +572,7 @@ SlashCmdList.DECKFOREVER = function(msg)
 	elseif msg == "back" then
 		Back()
 	else
-		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. SOURCE_LAYOUT .. " ».")
+		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat.")
 	end
 end
 

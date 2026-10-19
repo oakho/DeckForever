@@ -268,11 +268,11 @@ local function UpdateXP()
 	local done = UnitLevel("player") >= GetMaxPlayerLevel() or (IsXPUserDisabled and IsXPUserDisabled())
 	if done or not max or max <= 0 then xpBar:Hide() return end
 	local xp = UnitXP("player")
-	xpBar:SetMinMaxValues(0, max)
-	xpBar:SetValue(xp)
+	xpBar.fill:SetMinMaxValues(0, max)
+	xpBar.fill:SetValue(xp)
 	-- (Blizzard's art: blue while rested, purple else)
 	local atlas = GetRestState() == 1 and "UI-HUD-ExperienceBar-Fill-Rested" or "UI-HUD-ExperienceBar-Fill-Experience"
-	if xpBar.atlas ~= atlas then xpBar.atlas = atlas xpBar:SetStatusBarTexture(atlas) end
+	if xpBar.atlas ~= atlas then xpBar.atlas = atlas xpBar.fill:SetStatusBarTexture(atlas) end
 	xpBar.rested:SetMinMaxValues(0, max)
 	xpBar.rested:SetValue(math.min(max, xp + (GetXPExhaustion() or 0)))
 	xpBar:Show()
@@ -280,24 +280,24 @@ end
 local function XPBar()
 	if xpBar then UpdateXP() return end
 	local pixel = 768 / 800 / UIParent:GetScale()   -- (a screen pixel, in UIParent's units)
-	xpBar = CreateFrame("StatusBar", "DeckForeverXPBar", UIParent)
+	-- one frame (faded as one: FADED) with a grey background, so the bar's empty part shows against the
+	-- screen's edge; in it the rested XP (Blizzard's band past the XP), and the XP over it
+	xpBar = CreateFrame("Frame", "DeckForeverXPBar", UIParent)
 	xpBar:SetFrameStrata("LOW")
 	xpBar:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
 	xpBar:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
 	xpBar:SetHeight(XP_HEIGHT * pixel)
-	-- the rested XP, Blizzard's band past the XP: a bar under ours (frame levels), with the background
-	xpBar.rested = CreateFrame("StatusBar", nil, UIParent)
-	xpBar.rested:SetFrameStrata("LOW")
-	xpBar.rested:SetAllPoints(xpBar)
-	xpBar.rested:SetFrameLevel(1)
-	xpBar:SetFrameLevel(2)
-	xpBar.rested:SetStatusBarTexture("UI-HUD-ExperienceBar-Fill-Prediction")
-	local back = xpBar.rested:CreateTexture(nil, "BACKGROUND")
+	local back = xpBar:CreateTexture(nil, "BACKGROUND")
 	back:SetAllPoints()
-	back:SetColorTexture(0, 0, 0, 0.6)
-	xpBar:HookScript("OnShow", function() xpBar.rested:Show() end)
-	xpBar:HookScript("OnHide", function() xpBar.rested:Hide() end)
-	local events = CreateFrame("Frame", nil, xpBar)
+	back:SetColorTexture(0.6, 0.6, 0.6, 1)
+	for i, key in ipairs({ "rested", "fill" }) do
+		local bar = CreateFrame("StatusBar", nil, xpBar)
+		bar:SetAllPoints()
+		bar:SetFrameLevel(xpBar:GetFrameLevel() + i)
+		xpBar[key] = bar
+	end
+	xpBar.rested:SetStatusBarTexture("UI-HUD-ExperienceBar-Fill-Prediction")
+	local events = CreateFrame("Frame", nil, UIParent)
 	for _, e in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP", "ENABLE_XP_GAIN", "DISABLE_XP_GAIN" }) do
 		pcall(events.RegisterEvent, events, e)
 	end

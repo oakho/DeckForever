@@ -26,6 +26,7 @@ local OLD_LAYOUTS = { ["SteamDeck B"] = true }  -- earlier names of ours, remove
 -- (nothing over it: the character stands there); chat top-left; the buff bars under it; the swing timer
 -- just above the bars
 local M = 8                                     -- the gap to the screen's edges and between neighbours
+local B = M + 4                 -- from the bottom edge: over the XP bar (XPBar, 4 px)
 local LAYOUT = {
 	-- bottom up: the XP bar on the edge; Easy Controller's L3 / R3 (they hang 54 under the main bar)
 	-- just above it; the main bar (compact) with L5 / R5 either side
@@ -61,7 +62,7 @@ local LAYOUT = {
 	-- drawn about 3 inside, set from zoomed captures so its box runs from 8 to the XP bar - 8, its top on
 	-- the minimap header's visible top. The chat is 10..320 across, 595..792 down: its bottom M from
 	-- the screen's)
-	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = M,
+	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = B,
 		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 1, HeightTensAndOnes = 97 } },
 	{ system = "CooldownViewer", index = 4, point = "TOPLEFT", relativePoint = "TOPLEFT", x = M, y = -(M + 150 + M) },
 	-- (test: the minimap and the game's tooltip swapped) bottom-right: the minimap M from the corner
@@ -70,7 +71,7 @@ local LAYOUT = {
 	-- it runs off the screen and the game pulls it back up); the buffs and debuffs M left of them.
 	-- (the tracker sits 1 px right of its anchor, the debuffs 1 px right of the buffs: set against that,
 	-- so each edge lands on M)
-	{ system = "Minimap", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = M },
+	{ system = "Minimap", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = B },
 	-- (the tooltip itself is put M from the corner by PlaceTooltip: Edit Mode keeps its corner lower)
 	{ system = "HudTooltip", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -M, y = -M },
 	-- (the tracker's contents narrowed to the minimap's width, NarrowQuests: moved right by what's taken off)
@@ -80,12 +81,12 @@ local LAYOUT = {
 	-- (the buffs take up to three rows when there are many: the debuffs under them)
 	{ system = "AuraFrame", index = 2, point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 261 + M + 1), y = -150 },
 	-- the game's menu and bags (hidden by the gamepad UI) out of the way, bottom-right
-	{ system = "MicroMenu", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = M },
+	{ system = "MicroMenu", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = B },
 }
 
 -- Easy Controller's supplies (bag space, reagents): set through its own saved position, out of the
 -- HUD in the bottom-right corner, left of the minimap, growing left. Its old position is kept in DeckForeverDB.easyController
-local EC_SUPPLIES = { pos = { point = "BOTTOMRIGHT", x = -(M + 273 + M), y = M }, layout = "left" }
+local EC_SUPPLIES = { pos = { point = "BOTTOMRIGHT", x = -(M + 273 + M), y = B }, layout = "left" }
 
 local function Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffDeckForever|r " .. msg)
@@ -200,7 +201,7 @@ function PlaceMinimap()
 	local scale = container:GetScale()
 	local half = map:GetWidth() / 2
 	container:ClearAllPoints()
-	container:SetPoint("CENTER", UIParent, "BOTTOMRIGHT", (-(M + 2) - half * scale) / scale, (M + 2 + half * scale) / scale)
+	container:SetPoint("CENTER", UIParent, "BOTTOMRIGHT", (-(M + 2) - half * scale) / scale, (B + 2 + half * scale) / scale)
 	local zone = cluster.ZoneTextButton
 	if zone then
 		zone:ClearAllPoints()
@@ -230,15 +231,20 @@ end
 -- there after the game anchors it (a plain frame: not protected). The game keeps 25 above the tooltip
 -- on the screen (room for a comparison's "Equipped" header): none while it's at its default place, the
 -- 25 back as it hides. While it's there, over the top of the quests, the quests fade (Fader)
-local questsUnderTip
-local function FadeQuests(fade) questsUnderTip = fade end
+-- the tooltip shows at its default place, over the quests (read, not hooked: a hook on its SetOwner,
+-- which GameTooltip_SetDefaultAnchor calls, errored)
+local function TipOverQuests()
+	local tip = GameTooltip
+	if not tip or tip:IsForbidden() or not tip:IsShown() or tip:GetNumPoints() ~= 1 then return false end
+	local point, relative, _, x, y = tip:GetPoint(1)
+	return point == "TOPRIGHT" and relative == UIParent and math.abs(x + (M - 2)) < 0.5 and math.abs(y + (M - 2)) < 0.5
+end
 local oursActive                 -- our layout is the one in use (seen as the world loads)
 local function PlaceTooltip(tooltip)
 	if not oursActive or tooltip ~= GameTooltip or tooltip:IsForbidden() then return end
 	tooltip:ClearAllPoints()
 	tooltip:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -(M - 2), -(M - 2))
 	tooltip:SetClampRectInsets(0, 0, 0, 0)
-	FadeQuests(true)
 end
 local tooltipHooked
 local function HookTooltip()
@@ -247,12 +253,56 @@ local function HookTooltip()
 	hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip) pcall(PlaceTooltip, tooltip) end)
 	GameTooltip:HookScript("OnHide", function(self)
 		self:SetClampRectInsets(0, 0, 25, 0)
-		FadeQuests(false)
 	end)
-	-- (the tooltip moved elsewhere while showing, by an owner of its own: the quests back)
-	hooksecurefunc(GameTooltip, "SetOwner", function(self, owner, anchor)
-		if anchor ~= "ANCHOR_NONE" then FadeQuests(false) end
-	end)
+end
+
+-- The XP bar, thin, along the whole bottom edge: ours (Blizzard's has a fixed width, its art is made for
+-- its height, and its Edit Mode width and height settings do nothing in this client), the XP and the
+-- rested XP as Blizzard's shows them. Blizzard's is faded out while ours shows (combat mode: FADED); at
+-- the top level, or with XP turned off, ours hides and Blizzard's (reputation...) is back
+local XP_HEIGHT = 4                   -- screen pixels
+local xpBar
+local function UpdateXP()
+	if not xpBar then return end
+	local max = UnitXPMax("player")
+	local done = UnitLevel("player") >= GetMaxPlayerLevel() or (IsXPUserDisabled and IsXPUserDisabled())
+	if done or not max or max <= 0 then xpBar:Hide() return end
+	local xp = UnitXP("player")
+	xpBar:SetMinMaxValues(0, max)
+	xpBar:SetValue(xp)
+	-- (Blizzard's art: blue while rested, purple else)
+	local atlas = GetRestState() == 1 and "UI-HUD-ExperienceBar-Fill-Rested" or "UI-HUD-ExperienceBar-Fill-Experience"
+	if xpBar.atlas ~= atlas then xpBar.atlas = atlas xpBar:SetStatusBarTexture(atlas) end
+	xpBar.rested:SetMinMaxValues(0, max)
+	xpBar.rested:SetValue(math.min(max, xp + (GetXPExhaustion() or 0)))
+	xpBar:Show()
+end
+local function XPBar()
+	if xpBar then UpdateXP() return end
+	local pixel = 768 / 800 / UIParent:GetScale()   -- (a screen pixel, in UIParent's units)
+	xpBar = CreateFrame("StatusBar", "DeckForeverXPBar", UIParent)
+	xpBar:SetFrameStrata("LOW")
+	xpBar:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
+	xpBar:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
+	xpBar:SetHeight(XP_HEIGHT * pixel)
+	-- the rested XP, Blizzard's band past the XP: a bar under ours (frame levels), with the background
+	xpBar.rested = CreateFrame("StatusBar", nil, UIParent)
+	xpBar.rested:SetFrameStrata("LOW")
+	xpBar.rested:SetAllPoints(xpBar)
+	xpBar.rested:SetFrameLevel(1)
+	xpBar:SetFrameLevel(2)
+	xpBar.rested:SetStatusBarTexture("UI-HUD-ExperienceBar-Fill-Prediction")
+	local back = xpBar.rested:CreateTexture(nil, "BACKGROUND")
+	back:SetAllPoints()
+	back:SetColorTexture(0, 0, 0, 0.6)
+	xpBar:HookScript("OnShow", function() xpBar.rested:Show() end)
+	xpBar:HookScript("OnHide", function() xpBar.rested:Hide() end)
+	local events = CreateFrame("Frame", nil, xpBar)
+	for _, e in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP", "ENABLE_XP_GAIN", "DISABLE_XP_GAIN" }) do
+		pcall(events.RegisterEvent, events, e)
+	end
+	events:SetScript("OnEvent", function() C_Timer.After(0, UpdateXP) end)
+	UpdateXP()
 end
 
 --------------------------------------------------------------------------------
@@ -266,6 +316,7 @@ local IN_COMBAT_ALPHA = 0.3           -- the non-essentials, in combat
 local CALM_ALPHA = 0.35               -- the fight's frames, out of combat
 local QUESTS_UNDER_TIP = 0.25         -- the quests, under the tooltip at its default place
 local CHAT_ALPHA = 0.65               -- the chat's messages
+local XP_ALPHA = 0.5                  -- the XP bar (Blizzard's colours, bright beside the rest)
 
 local forceFight                -- /df combat: shown as in combat, to see the fades (display only)
 local function Fighting() return forceFight or InCombatLockdown() or UnitAffectingCombat("player") end
@@ -273,9 +324,13 @@ local function Fighting() return forceFight or InCombatLockdown() or UnitAffecti
 -- frame (by its name) -> the alpha it should have now
 local FADED = {
 	MinimapCluster = function() return Fighting() and IN_COMBAT_ALPHA or 1 end,
-	StatusTrackingBarManager = function() return Fighting() and IN_COMBAT_ALPHA or 1 end,
+	StatusTrackingBarManager = function()
+		if xpBar and xpBar:IsShown() then return 0 end
+		return Fighting() and IN_COMBAT_ALPHA or 1
+	end,
+	DeckForeverXPBar = function() return Fighting() and IN_COMBAT_ALPHA or XP_ALPHA end,
 	ObjectiveTrackerFrame = function()
-		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, questsUnderTip and QUESTS_UNDER_TIP or 1)
+		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
 	end,
 	DeckForeverLegend = function(legend)
 		local resting = legend.group == nil or legend.group == "GAMEPLAY"
@@ -724,6 +779,7 @@ f:SetScript("OnEvent", function(_, event, name)
 		CalmDriver()
 		SkinEditBox()
 		BiggerText()
+		XPBar()
 		StatusText()
 		HookQuests()
 		NarrowQuests()

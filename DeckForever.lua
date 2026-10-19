@@ -62,8 +62,9 @@ local LAYOUT = {
 	-- drawn about 3 inside, set from zoomed captures so its box runs from 8 to the XP bar - 8, its top on
 	-- the minimap header's visible top. The chat is 10..320 across, 595..792 down: its bottom M from
 	-- the screen's)
-	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = B,
-		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 1, HeightTensAndOnes = 97 } },
+	-- (its background reaches 6 below it, 2 left of it: that background M from the edges, over the XP bar)
+	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = B + 6,
+		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 1, HeightTensAndOnes = 91 } },
 	{ system = "CooldownViewer", index = 4, point = "TOPLEFT", relativePoint = "TOPLEFT", x = M, y = -(M + 150 + M) },
 	-- (test: the minimap and the game's tooltip swapped) bottom-right: the minimap M from the corner
 	-- (273 wide, 284 tall with its zone header). Top-right: the tooltip's corner (it grows down over

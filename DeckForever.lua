@@ -54,12 +54,16 @@ local LAYOUT = {
 	{ system = "CooldownViewer", index = 2, point = "TOP", relativePoint = "BOTTOM", x = 0, y = 244,
 		settings = { IconLimit = 6 } },
 	{ system = "CooldownViewer", index = 3, point = "BOTTOMLEFT", relativePoint = "BOTTOM", x = -340, y = 352 },
-	-- top-left: the chat M from the top, its frame (the line you type in, drawn 3 left of the chat) M
-	-- from the left edge, as the gamepad help's border below (its tabs hidden: HideChatTabs; its clamp
-	-- taken off: UnclampChat); the buff bars under the line you type in (32 tall, under it)
-	{ system = "ChatFrame", point = "TOPLEFT", relativePoint = "TOPLEFT", x = M + 3, y = -M,
-		settings = { WidthHundreds = 4, WidthTensAndOnes = 30, HeightHundreds = 1, HeightTensAndOnes = 40 } },
-	{ system = "CooldownViewer", index = 4, point = "TOPLEFT", relativePoint = "TOPLEFT", x = M, y = -189 },
+	-- (test) bottom-left: the chat, from the left edge to the XP bar M away, as tall as the minimap and
+	-- its header (its tabs hidden: HideChatTabs; its clamp taken off: UnclampChat). Top-left: the
+	-- gamepad help (Legend.lua), the buff bars under its tallest group
+	-- (the line you type in is put over the chat, PlaceChat: 7 left and 19 right of it, its tooltip look
+	-- drawn about 3 inside, set from zoomed captures so its box runs from 8 to the XP bar - 8, its top on
+	-- the minimap header's visible top. The chat is 10..320 across, 595..792 down: its bottom M from
+	-- the screen's)
+	{ system = "ChatFrame", point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 10, y = M,
+		settings = { WidthHundreds = 3, WidthTensAndOnes = 10, HeightHundreds = 1, HeightTensAndOnes = 97 } },
+	{ system = "CooldownViewer", index = 4, point = "TOPLEFT", relativePoint = "TOPLEFT", x = M, y = -(M + 150 + M) },
 	-- (test: the minimap and the game's tooltip swapped) bottom-right: the minimap M from the corner
 	-- (273 wide, 284 tall with its zone header). Top-right: the tooltip's corner (it grows down over
 	-- the quests while it shows); the quests M from the top, at the tracker's least height (400: taller,
@@ -136,20 +140,15 @@ local function HookClassAction()
 	end
 end
 
--- The chat's tabs (General, Combat Log ...): not used with the gamepad, hidden whenever the chat shows
--- them (plain frames: not protected)
-local hiddenTabs = {}
+-- The chat's tabs (General, Combat Log ...): not used with the gamepad, made invisible and left alone
+-- otherwise (the chat fades them in and out itself: their alpha is set back to 0 by the fader, below;
+-- a hook on their Show broke the chat's own fades). Plain frames: not protected
+local CHAT_TABS = { "GeneralDockManager" }
+for i = 1, (NUM_CHAT_WINDOWS or 10) do CHAT_TABS[#CHAT_TABS + 1] = "ChatFrame" .. i .. "Tab" end
 local function HideChatTabs()
-	local frames = { _G.GeneralDockManager }
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do frames[#frames + 1] = _G["ChatFrame" .. i .. "Tab"] end
-	for _, tab in ipairs(frames) do
-		if tab and not tab:IsForbidden() then
-			if not hiddenTabs[tab] then
-				hiddenTabs[tab] = true
-				hooksecurefunc(tab, "Show", function(self) self:Hide() end)
-			end
-			tab:Hide()
-		end
+	for _, name in ipairs(CHAT_TABS) do
+		local tab = _G[name]
+		if tab and not tab:IsForbidden() then tab:EnableMouse(false) end
 	end
 end
 
@@ -219,11 +218,7 @@ function PlaceMinimap()
 		diel:SetPoint("BOTTOMRIGHT", map, "BOTTOMRIGHT", -3, 3)
 	end
 	local addons = _G.AddonCompartmentFrame
-	if addons and not addons.deckHidden then
-		addons.deckHidden = true
-		hooksecurefunc(addons, "Show", function(self) self:Hide() end)
-		addons:Hide()
-	end
+	if addons and not addons:IsForbidden() then addons:EnableMouse(false) end      -- (invisible: the fader)
 	if container.PlayerCoords then
 		container.PlayerCoords:ClearAllPoints()
 		container.PlayerCoords:SetPoint("BOTTOM", map, "BOTTOM", 0, 4)
@@ -287,6 +282,8 @@ local FADED = {
 	end,
 	-- the cooldown rows between the unit frames, with the player frame and the bars (as CalmDriver's
 	-- rule: in combat or with a target; these aren't protected, so faded from here, eased)
+	-- the chat's tabs and the minimap's addons list: never (HideChatTabs, PlaceMinimap)
+	AddonCompartmentFrame = function() return 0 end,
 	-- the line you type in: only while you type (the gamepad UI keeps it shown, at 35 %, all the time)
 	ChatFrame1EditBox = function(box) return box:HasFocus() and 1 or 0 end,
 	EssentialCooldownViewer = function() return (Fighting() or UnitExists("target")) and 1 or CALM_ALPHA end,
@@ -323,6 +320,7 @@ local function CalmDriver()
 	]])
 	RegisterStateDriver(calmDriver, "calm", "[combat][@target,exists] off; on")
 end
+for _, name in ipairs(CHAT_TABS) do FADED[name] = function() return 0 end end
 local current = {}
 local fader = CreateFrame("Frame")
 fader:SetScript("OnUpdate", function(_, elapsed)
@@ -621,6 +619,14 @@ local function PlaceChat()
 			UnclampChat()
 			chat:ClearAllPoints()
 			chat:SetPoint(entry.point, UIParent, entry.relativePoint, entry.x, entry.y)
+			-- the line you type in over the chat, not under it (its box from 8 to the XP bar - 8, its top on the
+			-- minimap header's)
+			local box = _G.ChatFrame1EditBox
+			if box and not box:IsForbidden() then
+				box:ClearAllPoints()
+				box:SetPoint("BOTTOMLEFT", chat, "TOPLEFT", -7, 3)
+				box:SetPoint("BOTTOMRIGHT", chat, "TOPRIGHT", 19, 3)
+			end
 		end
 	end
 end
@@ -685,6 +691,8 @@ f:SetScript("OnEvent", function(_, event, name)
 			and layout.layoutType ~= Enum.EditModeLayoutType.Preset or false
 	end
 	HookTooltip()
+	-- (Edit Mode may lay the chat out again, its clamp with it, after this: placed once more a moment later)
+	if oursActive then C_Timer.After(1, function() pcall(PlaceChat) end) end
 	if oursActive then
 		CalmDriver()
 		SkinEditBox()

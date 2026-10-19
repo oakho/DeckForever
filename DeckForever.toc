@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: DeckForever
+## Notes: An interface made for the Steam Deck's screen, on top of the gamepad UI and addons like Easy Controller. /df
+## Notes-frFR: Une interface faite pour l'écran du Steam Deck, par-dessus l'interface manette et des addons comme Easy Controller. /df
+## Version: 0.1.0
+## OptionalDeps: EasyController
+## SavedVariables: DeckForeverDB
+
+DeckForever.lua
+Legend.lua

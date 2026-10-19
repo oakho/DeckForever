@@ -69,7 +69,8 @@ local LAYOUT = {
 	{ system = "Minimap", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = M },
 	-- (the tooltip itself is put M from the corner by PlaceTooltip: Edit Mode keeps its corner lower)
 	{ system = "HudTooltip", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -M, y = -M },
-	{ system = "ObjectiveTracker", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 1), y = -M,
+	-- (the tracker's contents narrowed to the minimap's width, NarrowQuests: moved right by what's taken off)
+	{ system = "ObjectiveTracker", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 1) + (261 - 202), y = -M,
 		settings = { Height = 0 } },
 	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 261 + M), y = -(M + 1) },   -- (its icons sit 1 above it)
 	-- (the buffs take up to three rows when there are many: the debuffs under them)
@@ -145,7 +146,7 @@ local function HideChatTabs()
 		if tab and not tab:IsForbidden() then
 			if not hiddenTabs[tab] then
 				hiddenTabs[tab] = true
-				hooksecurefunc(tab, "Show", tab.Hide)
+				hooksecurefunc(tab, "Show", function(self) self:Hide() end)
 			end
 			tab:Hide()
 		end
@@ -220,7 +221,7 @@ function PlaceMinimap()
 	local addons = _G.AddonCompartmentFrame
 	if addons and not addons.deckHidden then
 		addons.deckHidden = true
-		hooksecurefunc(addons, "Show", addons.Hide)
+		hooksecurefunc(addons, "Show", function(self) self:Hide() end)
 		addons:Hide()
 	end
 	if container.PlayerCoords then
@@ -413,6 +414,51 @@ local function StatusText()
 		SetCVar("statusTextDisplay", "NUMERIC")
 		SetCVar("statusText", "1")
 	end
+end
+
+-- The quests as wide as the minimap (its border: the map + 4). Blizzard's tracker is 260 wide: its
+-- container stays so (resizing it would have the tracker lay itself out from DeckForever's code), and
+-- what's drawn in it is narrowed: each module, its header, the header's art and text (the quest blocks,
+-- held by both edges of their module, follow), every module the tracker gets (AddModule) too. The
+-- container is moved right by the difference, so the narrowed contents end M from the screen's edge;
+-- the tracker isn't kept on the screen any more for that (its empty right part is off it)
+local TRACKER_WIDTH = 260
+local function QuestsWidth()
+	local map = _G.Minimap
+	return map and math.floor(map:GetWidth() + 4 + 0.5) or TRACKER_WIDTH
+end
+-- (the headers' art has clear ends, 9 % of its width: stretched past the header by that, so its line
+-- runs from the minimap's left edge to its right one)
+local HEADER_ART_SPAN = 202 / 184
+local function NarrowHeader(header, width, textMargin)
+	if not header or header:IsForbidden() then return end
+	header:SetWidth(width)
+	if header.Background then
+		header.Background:SetWidth(width * HEADER_ART_SPAN)
+		header.Background:ClearAllPoints()
+		header.Background:SetPoint("CENTER", header, "CENTER", 2, 0)
+	end
+	if header.Text then header.Text:SetWidth(width - textMargin) end
+end
+local function NarrowQuests()
+	local tracker = _G.ObjectiveTrackerFrame
+	if not oursActive or not tracker or tracker:IsForbidden() then return end
+	local width = QuestsWidth()
+	tracker:SetClampedToScreen(false)
+	NarrowHeader(tracker.Header, width, 52)
+	for _, module in ipairs(tracker.modules or {}) do
+		if not module:IsForbidden() then
+			module:SetWidth(width)
+			NarrowHeader(module.Header, width, 60)
+		end
+	end
+end
+local questsHooked
+local function HookQuests()
+	local tracker = _G.ObjectiveTrackerFrame
+	if questsHooked or not tracker or not tracker.AddModule then return end
+	questsHooked = true
+	hooksecurefunc(tracker, "AddModule", function() NarrowQuests() end)
 end
 
 local function FindLayout(layouts, name)
@@ -611,7 +657,7 @@ end
 -- Edit Mode lays the chat out again (with its clamp) as it closes: put back after it
 if EventRegistry and EventRegistry.RegisterCallback then
 	EventRegistry:RegisterCallback("EditMode.Exit", function()
-		C_Timer.After(0, function() pcall(PlaceChat) PlaceMinimap() end)
+		C_Timer.After(0, function() pcall(PlaceChat) PlaceMinimap() NarrowQuests() end)
 	end, "DeckForever")
 end
 
@@ -643,6 +689,8 @@ f:SetScript("OnEvent", function(_, event, name)
 		CalmDriver()
 		SkinEditBox()
 		StatusText()
+		HookQuests()
+		NarrowQuests()
 	end
 	SquareMinimap()
 	PlaceMinimap()

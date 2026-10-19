@@ -409,6 +409,27 @@ local function SkinEditBox()
 	back:SetFrameLevel(math.max(0, box:GetFrameLevel() - 1))
 end
 
+-- The HUD's text a size up, nearer the chat's: the quests' and the unit bars' font objects (theirs
+-- only), the names on the unit frames and the minimap's header (their font strings). The unit bars' a
+-- point less: their bars are barely taller. Fonts aren't protected
+local FONT_OBJECTS = { ObjectiveTrackerLineFont = 2, ObjectiveTrackerHeaderFont = 2, TextStatusBarText = 1 }
+local FONT_STRINGS = { PlayerName = 2, MinimapZoneText = 2, TimeManagerClockTicker = 2 }
+local enlarged = {}
+local function Enlarge(object, bigger)
+	if not object or enlarged[object] or (object.IsForbidden and object:IsForbidden()) then return end
+	local font, size, flags = object:GetFont()
+	if not font then return end
+	enlarged[object] = true
+	object:SetFont(font, size + bigger, flags or "")
+end
+local function BiggerText()
+	for name, bigger in pairs(FONT_OBJECTS) do Enlarge(_G[name], bigger) end
+	for name, bigger in pairs(FONT_STRINGS) do Enlarge(_G[name], bigger) end
+	local target = _G.TargetFrame
+	local main = target and target.TargetFrameContent and target.TargetFrameContent.TargetFrameContentMain
+	Enlarge(main and main.Name, 2)
+end
+
 -- The unit frames' health and power shown as numbers (the game's own option, Status Text): set once,
 -- with the layout, if it's off; turned back on the Options page as any other setting
 local function StatusText()
@@ -702,6 +723,7 @@ f:SetScript("OnEvent", function(_, event, name)
 	if oursActive then
 		CalmDriver()
 		SkinEditBox()
+		BiggerText()
 		StatusText()
 		HookQuests()
 		NarrowQuests()

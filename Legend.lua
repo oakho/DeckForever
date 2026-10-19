@@ -9,8 +9,8 @@
 --------------------------------------------------------------------------------
 
 local M = 8                                     -- from the screen's edges
-local FONT_SIZE, HEADER_SIZE = 12, 13
-local ICON, ROW, GAP, PAD, COL_GAP = 18, 20, 5, 10, 12
+local FONT_SIZE, HEADER_SIZE = 14, 15
+local ICON, ROW, GAP, PAD, COL_GAP = 20, 22, 5, 10, 12
 local DISABLED_ALPHA = 0.4
 local LOOK = 0.05                               -- seconds between looks at which group shows
 local REFRESH = 0.25                            -- seconds between redraws of the same group (labels, usable)

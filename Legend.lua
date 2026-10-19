@@ -3,15 +3,17 @@
 -- (it decides which group shows: at rest, LB, RB, LB + RB, menus, HUD), turned invisible; each time it
 -- shows a group, ours draws that group again from its entries (their buttons, as the options' swaps set
 -- them, and whether each is usable), with short labels, in columns that fit the text, in a panel with
--- the game's tooltip look, in the bottom-left corner. Nothing of Blizzard's is replaced: its ShowGroup
--- and HideAllGroups are hooked and its entries only read.
+-- the game's tooltip look, in the top-left corner. Nothing of Blizzard's is touched or hooked: which
+-- group shows is read from its frames a few times a second (hooks on its ShowGroup and HideAllGroups
+-- errored as one calls the other, and left the gamepad's actions tainted: blocked).
 --------------------------------------------------------------------------------
 
 local M = 8                                     -- from the screen's edges
 local FONT_SIZE, HEADER_SIZE = 12, 13
 local ICON, ROW, GAP, PAD, COL_GAP = 18, 20, 5, 10, 12
 local DISABLED_ALPHA = 0.4
-local REFRESH = 0.25                            -- seconds between looks at the shown group (labels, usable)
+local LOOK = 0.05                               -- seconds between looks at which group shows
+local REFRESH = 0.25                            -- seconds between redraws of the same group (labels, usable)
 
 -- the short labels, by the game's own strings (read as the file loads, so in the game's language);
 -- a label not listed loses what's in brackets ("(Appuyer/Maintenir)")
@@ -73,7 +75,7 @@ end
 
 local panel, font
 local rows, icons, used = {}, {}, {}
-local shownGroup, wait = nil, 0
+local shownGroup
 
 local function Build()
 	-- the look of the game's tooltips: their backdrop, their fonts
@@ -232,16 +234,14 @@ local function Render()
 	panel:Show()
 end
 
-local function OnShowGroup(_, group)
-	shownGroup = group
-	panel.group = group                          -- (combat mode: DeckForever.lua)
-	Render()
-end
-
-local function OnHideAll()
-	shownGroup = nil
-	panel.group = nil
-	panel:Hide()
+-- the group Blizzard's legend shows (its frames shown), or nil
+local function ShownGroup(legend)
+	if not legend:IsShown() then return nil end
+	for group, frames in pairs(legend.groups or {}) do
+		for _, f in ipairs(frames) do
+			if f.InputIcon1 and f:IsShown() then return group end
+		end
+	end
 end
 
 local function Setup()
@@ -249,20 +249,21 @@ local function Setup()
 	if panel or not legend or legend:IsForbidden() then return end
 	Build()
 	legend:SetAlpha(0)
-	hooksecurefunc(legend, "ShowGroup", OnShowGroup)
-	hooksecurefunc(legend, "HideAllGroups", OnHideAll)
-	panel:SetScript("OnUpdate", function(_, elapsed)
-		wait = wait - elapsed
-		if wait > 0 then return end
-		wait = REFRESH
+	-- (on a frame of its own: the panel's OnUpdate stops while it's hidden)
+	local look, redraw = 0, 0
+	CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
+		look, redraw = look - elapsed, redraw - elapsed
+		if look > 0 then return end
+		look = LOOK
+		local group = ShownGroup(legend)
+		if group == shownGroup and redraw > 0 then return end
+		redraw = REFRESH
+		shownGroup = group
+		panel.group = group                          -- (combat mode: DeckForever.lua)
 		Render()
 	end)
-	-- the group showing now
-	for group, frames in pairs(legend.groups or {}) do
-		for _, f in ipairs(frames) do
-			if f.InputIcon1 and f:IsShown() then shownGroup = group end
-		end
-	end
+	shownGroup = ShownGroup(legend)
+	panel.group = shownGroup
 	Render()
 end
 

@@ -12,7 +12,7 @@ local PROFILE = "DeckForever"
 
 -- the camera itself (DynamicCam's standard settings: its cvars)
 local CVARS = {
-	test_cameraOverShoulder = 1,               -- the camera a little right: the character a little left (yards)
+	test_cameraOverShoulder = 1.6,             -- the camera a little right: the character a little left (yards)
 	cameraDistanceMaxZoomFactor = 2.6,         -- up to 39 yards away (mounted, vehicles)
 	-- the view tilts with the zoom, the character a little low in it (ActionCam's dynamic pitch)
 	test_cameraDynamicPitch = 1,

@@ -751,11 +751,57 @@ if EventRegistry and EventRegistry.RegisterCallback then
 	end, "DeckForever")
 end
 
+-- What's only done with our layout in use, once it is (each piece guards itself: safe to run again)
+local function SetupOurs()
+	CalmDriver()
+	SkinEditBox()
+	BiggerText()
+	XPBar()
+	StatusText()
+	HookQuests()
+	NarrowQuests()
+	pcall(PlaceChat)
+	-- (Edit Mode may lay the chat out again, its clamp with it, after this: placed once more a moment later)
+	C_Timer.After(1, function() pcall(PlaceChat) end)
+end
+
+-- Is our layout the one in use? At login Edit Mode may not have its layouts yet as the world loads
+-- (more addons, later): asked again every second until it has them, and whenever they change
+local DETECT_TRIES = 15
 local checked                   -- the layout checked once, at the first login of the session
+local tries = 0
+local function Detect()
+	if not (C_EditMode and EditModePresetLayoutManager) then return end
+	local ok, layouts, active, _, saved = pcall(Layouts)
+	local ready = ok and active and saved and saved.layouts and #saved.layouts > 0 and layouts[active]
+	if not ready then
+		tries = tries + 1
+		if tries <= DETECT_TRIES then C_Timer.After(1, Detect) end
+		return
+	end
+	local layout = layouts[active]
+	local was = oursActive
+	oursActive = layout.layoutName == TARGET_LAYOUT and layout.layoutType ~= Enum.EditModeLayoutType.Preset
+	if oursActive and not InCombatLockdown() then SetupOurs() end
+	-- (once a session, the layouts known: a game bug drops elements from saved layouts at launch)
+	if not checked then
+		checked = true
+		local fine, holds = pcall(Holds)
+		if fine and not holds and not InCombatLockdown() then
+			Print("la disposition avait perdu des éléments (bug du jeu) : réparée.")
+			Apply()
+		end
+	end
+	if was and not oursActive then
+		Print("disposition DeckForever quittée : /reload pour revenir à l'interface de Blizzard.")
+	end
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")      -- (a class action shown or hidden in combat: placed after)
+pcall(f.RegisterEvent, f, "EDIT_MODE_LAYOUTS_UPDATED")
 f:SetScript("OnEvent", function(_, event, name)
 	if event == "ADDON_LOADED" then
 		if name == "DeckForever" then
@@ -765,36 +811,13 @@ f:SetScript("OnEvent", function(_, event, name)
 		return
 	end
 	if event == "PLAYER_REGEN_ENABLED" then PlaceClassAction() return end
+	if event == "EDIT_MODE_LAYOUTS_UPDATED" then Detect() return end
 	HookClassAction()
 	PlaceClassAction()
 	HideChatTabs()
-	if C_EditMode and EditModePresetLayoutManager then
-		local ok, layouts, active = pcall(Layouts)
-		local layout = ok and layouts[active]
-		oursActive = layout and layout.layoutName == TARGET_LAYOUT
-			and layout.layoutType ~= Enum.EditModeLayoutType.Preset or false
-	end
 	HookTooltip()
-	-- (Edit Mode may lay the chat out again, its clamp with it, after this: placed once more a moment later)
-	if oursActive then C_Timer.After(1, function() pcall(PlaceChat) end) end
-	if oursActive then
-		CalmDriver()
-		SkinEditBox()
-		BiggerText()
-		XPBar()
-		StatusText()
-		HookQuests()
-		NarrowQuests()
-	end
+	Detect()
 	SquareMinimap()
 	PlaceMinimap()
 	if C_EditMode and EditModePresetLayoutManager then pcall(PlaceChat) end
-	if not checked then
-		checked = true
-		local ok, holds = pcall(Holds)
-		if ok and not holds and not InCombatLockdown() then
-			Print("la disposition avait perdu des éléments (bug du jeu) : réparée.")
-			Apply()
-		end
-	end
 end)

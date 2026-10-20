@@ -39,3 +39,8 @@ for i = 1, #items do for j = i + 1, #items do
   end
 end end
 print(n == 0 and "  aucun" or ("  " .. n .. " chevauchement(s)"))
+print("-- erreurs / actions bloquées :")
+local d, m = e.DiagErreursDB, 0
+for _, x in ipairs(d.errors or {}) do m = m + 1 print("  erreur " .. x.at .. " " .. x.msg) end
+for k, v in pairs(d.blocked or {}) do m = m + 1 print("  bloqué " .. v .. "x " .. k) end
+if m == 0 then print("  aucune") end

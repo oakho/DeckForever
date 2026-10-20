@@ -13,8 +13,3 @@ m=$(stat -c %Y "$F"); "$HERE/wowcmd.sh" "/reload" >/dev/null
 s=$(date +%s); until [ $(stat -c %Y "$F") -gt $m ] || [ $(( $(date +%s) - s )) -ge 60 ]; do sleep 2; done
 cp "$F" "$OUT/$1.lua"; wait 25
 lua "$HERE/check.lua" "$OUT/$1.lua"
-echo "-- erreurs / actions bloquées :"
-lua -e 'local e={} assert(loadfile(arg[1],"t",e))() local d=e.DiagErreursDB local n=0
-for _,x in ipairs(d.errors or {}) do n=n+1 print("  erreur "..x.at.." "..x.msg) end
-for k,v in pairs(d.blocked or {}) do n=n+1 print("  bloqué "..v.."x "..k) end
-if n==0 then print("  aucune") end' "$OUT/$1.lua"

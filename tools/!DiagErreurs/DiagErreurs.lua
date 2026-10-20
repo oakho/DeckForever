@@ -147,6 +147,15 @@ local function Survey()
 		local names = {}
 		for k, v in pairs(Enum.EditModeSystem or {}) do names[#names + 1] = k .. "=" .. v end
 		db.editmodeSystems = names
+		local det = {}
+		local ok, presets = pcall(function() return EditModePresetLayoutManager:GetCopyOfPresetLayouts() end)
+		det[#det + 1] = "presets ok=" .. tostring(ok) .. " n=" .. tostring(ok and #presets)
+		for i, l in ipairs(ok and presets or {}) do det[#det + 1] = "  preset " .. i .. " " .. tostring(l.layoutName) .. " type=" .. tostring(l.layoutType) end
+		local saved = C_EditMode.GetLayouts()
+		det[#det + 1] = "saved n=" .. #(saved.layouts or {}) .. " active=" .. tostring(saved.activeLayout)
+		for i, l in ipairs(saved.layouts or {}) do det[#det + 1] = "  saved " .. i .. " " .. tostring(l.layoutName) .. " type=" .. tostring(l.layoutType) end
+		det[#det + 1] = "DeckForever loaded=" .. tostring(C_AddOns and C_AddOns.IsAddOnLoaded("DeckForever")) .. " xpbar=" .. tostring(_G.DeckForeverXPBar ~= nil) .. " legend=" .. tostring(_G.DeckForeverLegend ~= nil)
+		db.detect = det
 		local st = {}
 		for k, v in pairs(Enum.EditModeStatusTrackingBarSetting or {}) do st[#st + 1] = k .. "=" .. v end
 		db.statusSettings = st

@@ -1,0 +1,6 @@
+## Interface: 16001
+## Title: !DiagErreurs (temporaire)
+## Notes: Enregistre les erreurs Lua dans SavedVariables pour diagnostic. A supprimer apres.
+## SavedVariables: DiagErreursDB
+
+DiagErreurs.lua

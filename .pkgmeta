@@ -3,3 +3,6 @@ package-as: DeckForever
 ignore:
   - README.md
   - .pkgmeta
+  - CLAUDE.md
+  - .claude
+  - tools

@@ -89,7 +89,7 @@ local function Survey()
 	end
 	db.minimap = mm
 	local cv = {}
-	for _, n in ipairs({ "chatStyle", "statusText", "statusTextDisplay", "chatMouseScroll", "wholeChatWindowClickable" }) do
+	for _, n in ipairs({ "chatStyle", "statusText", "statusTextDisplay", "chatMouseScroll", "wholeChatWindowClickable", "test_cameraOverShoulder", "CameraKeepCharacterCentered", "CameraReduceUnexpectedMovement", "test_cameraDynamicPitch", "cameraDistanceMaxZoomFactor" }) do
 		cv[#cv + 1] = n .. "=" .. tostring(GetCVar(n))
 	end
 	local eb = ChatFrame1EditBox

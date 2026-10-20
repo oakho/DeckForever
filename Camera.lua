@@ -12,7 +12,7 @@ local PROFILE = "DeckForever"
 
 -- the camera itself (DynamicCam's standard settings: its cvars)
 local CVARS = {
-	test_cameraOverShoulder = -1,              -- the camera a little left of the character
+	test_cameraOverShoulder = -3,              -- the camera left of the character (yards)
 	cameraDistanceMaxZoomFactor = 2.6,         -- up to 39 yards away (mounted, vehicles)
 	-- the view tilts with the zoom, the character a little low in it (ActionCam's dynamic pitch)
 	test_cameraDynamicPitch = 1,
@@ -41,8 +41,26 @@ local ZOOMS = {
 	["170"] = { min = 20, max = 26 },          -- vehicle
 }
 
+-- The game's "keep the character centred" (motion sickness) option cancels the shoulder offset;
+-- DynamicCam says it turns it off, but here it stays on: off with our profile, at each login too
+local function Uncentre()
+	if GetCVar("CameraKeepCharacterCentered") ~= "0" then SetCVar("CameraKeepCharacterCentered", 0) end
+end
+
+local function DynamicCam()
+	local ace = LibStub and LibStub("AceAddon-3.0", true)
+	return ace and ace:GetAddon("DynamicCam", true)
+end
+
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:SetScript("OnEvent", function()
+	local DC = DynamicCam()
+	if DC and DC.db and DC.db:GetCurrentProfile() == PROFILE then Uncentre() end
+end)
+
 function ns.CameraProfile(print)
-	local DC = LibStub and LibStub("AceAddon-3.0", true) and LibStub("AceAddon-3.0"):GetAddon("DynamicCam", true)
+	local DC = DynamicCam()
 	if not (DC and DC.db) then print("DynamicCam n'est pas chargé.") return end
 	if InCombatLockdown() then print("pas en combat.") return end
 	DC.db:SetProfile(PROFILE)
@@ -61,5 +79,6 @@ function ns.CameraProfile(print)
 		end
 	end
 	DC:RefreshConfig()
+	Uncentre()
 	print(("profil caméra « %s » de DynamicCam actif (réglable dans ses options)."):format(PROFILE))
 end

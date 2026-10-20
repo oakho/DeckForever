@@ -25,6 +25,7 @@ local OLD_LAYOUTS = { ["SteamDeck B"] = true }  -- earlier names of ours, remove
 -- side of the main bar, focus above the target; the cooldowns in the free corners beside the main bar
 -- (nothing over it: the character stands there); chat top-left; the buff bars under it; the swing timer
 -- just above the bars
+local _, ns = ...
 local M = 8                                     -- the gap to the screen's edges and between neighbours
 local B = M + 4                 -- from the bottom edge: over the XP bar (XPBar, 4 px)
 local LAYOUT = {
@@ -739,8 +740,10 @@ SlashCmdList.DECKFOREVER = function(msg)
 		Print(forceFight and "aperçu combat : on (affichage seulement)." or "aperçu combat : off.")
 	elseif msg == "back" then
 		Back()
+	elseif msg == "camera" or msg == "vue" then
+		ns.CameraProfile(Print)
 	else
-		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat.")
+		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat · /df camera : profil caméra DynamicCam.")
 	end
 end
 

@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- A DynamicCam profile for the Deck (/df camera): a natural camera, a little left of the character,
+-- A DynamicCam profile for the Deck (/df camera): a natural camera, the character a little left,
 -- closer in combat and further out of it, further still mounted or in a vehicle. Written as a
 -- DynamicCam profile of its own ("DeckForever"), made the one in use; your other profiles are left
 -- as they are, and DynamicCam's options change it as any other. Run again to set it back to these
@@ -12,7 +12,7 @@ local PROFILE = "DeckForever"
 
 -- the camera itself (DynamicCam's standard settings: its cvars)
 local CVARS = {
-	test_cameraOverShoulder = -3,              -- the camera left of the character (yards)
+	test_cameraOverShoulder = 1,               -- the camera a little right: the character a little left (yards)
 	cameraDistanceMaxZoomFactor = 2.6,         -- up to 39 yards away (mounted, vehicles)
 	-- the view tilts with the zoom, the character a little low in it (ActionCam's dynamic pitch)
 	test_cameraDynamicPitch = 1,

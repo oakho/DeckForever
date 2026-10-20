@@ -44,7 +44,7 @@ named `DeckForever`), then restart the game.
 |---|---|
 | `/df go` | Creates the *DeckForever* layout and makes it the one in use (then `/reload`). |
 | `/df back` | Goes back to the layout it was copied from. |
-| `/df camera` | With [DynamicCam](https://www.curseforge.com/wow/addons/dynamiccam): a camera profile of its own, a little left of the character, closer in combat, further mounted or in a vehicle. |
+| `/df camera` | With [DynamicCam](https://www.curseforge.com/wow/addons/dynamiccam): a camera profile of its own, the character a little left, closer in combat, further mounted or in a vehicle. |
 | `/df fx` | Shows the combat fades out of combat, to look at them (display only). |
 
 `/df go` copies a layout named *SteamDeck* if you have one, else the layout in use, else the game's

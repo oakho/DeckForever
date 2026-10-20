@@ -6,6 +6,7 @@
 -- place changes. A waypoint you set yourself keeps the arrow. Nothing without TomTom.
 --------------------------------------------------------------------------------
 
+local M = 8                            -- from the screen's edges
 local LOOK = 2                         -- seconds between looks (the closest quest changes as you move)
 local TURN_IN = "À rendre : "
 
@@ -86,6 +87,13 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_LOGIN" then
 		if not (TomTom and TomTom.AddWaypoint and C_QuestLog and C_QuestLog.GetQuestsOnMap) then return end
+		-- the arrow at the top's middle, set once in TomTom's own setting (which it applies as the world
+		-- loads; moved by hand afterwards, it stays where you put it)
+		local arrow = TomTom.profile and TomTom.profile.arrow
+		if arrow and not DeckForeverDB.arrowPlaced then
+			DeckForeverDB.arrowPlaced = true
+			arrow.position = { "TOP", nil, "TOP", 0, -M }
+		end
 		for _, e in ipairs({ "QUEST_POI_UPDATE", "QUEST_LOG_UPDATE", "QUEST_WATCH_LIST_CHANGED",
 			"SUPER_TRACKING_CHANGED", "ZONE_CHANGED_NEW_AREA" }) do
 			pcall(f.RegisterEvent, f, e)

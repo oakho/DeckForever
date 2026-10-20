@@ -20,6 +20,9 @@ Made for **WoW Forever** (Interface 16001) played with a gamepad.
 - **A lighter gamepad help.** Blizzard's legend, redrawn with short labels, columns that fit the
   text and the look of the game's tooltips. It shows the same groups (at rest, LB, RB, LB + RB,
   menus) and follows the options' button swaps.
+- **TomTom's arrow on your quests.** With [TomTom](https://www.curseforge.com/wow/addons/tomtom)
+  installed, its arrow points at the quest you follow, or else the closest watched one on your
+  map (TomTom does this itself only on retail). A waypoint you set yourself keeps the arrow.
 - **Combat mode.**
   - In combat, what isn't needed fades: the minimap, the quests, the XP bar and the gamepad help
     (back as you hold LB or RB).

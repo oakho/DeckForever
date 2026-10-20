@@ -155,6 +155,9 @@ local function Survey()
 		det[#det + 1] = "saved n=" .. #(saved.layouts or {}) .. " active=" .. tostring(saved.activeLayout)
 		for i, l in ipairs(saved.layouts or {}) do det[#det + 1] = "  saved " .. i .. " " .. tostring(l.layoutName) .. " type=" .. tostring(l.layoutType) end
 		det[#det + 1] = "DeckForever loaded=" .. tostring(C_AddOns and C_AddOns.IsAddOnLoaded("DeckForever")) .. " xpbar=" .. tostring(_G.DeckForeverXPBar ~= nil) .. " legend=" .. tostring(_G.DeckForeverLegend ~= nil)
+		det[#det + 1] = "project=" .. tostring(WOW_PROJECT_ID) .. " mainline=" .. tostring(WOW_PROJECT_MAINLINE) .. " classic=" .. tostring(WOW_PROJECT_CLASSIC)
+		local arrow = _G.TomTomCrazyArrow
+		det[#det + 1] = "arrow=" .. tostring(arrow ~= nil) .. " shown=" .. tostring(arrow and arrow:IsShown()) .. " poiapi=" .. tostring(C_QuestLog and C_QuestLog.GetQuestsOnMap ~= nil) .. " supertrack=" .. tostring(C_SuperTrack ~= nil)
 		db.detect = det
 		local st = {}
 		for k, v in pairs(Enum.EditModeStatusTrackingBarSetting or {}) do st[#st + 1] = k .. "=" .. v end

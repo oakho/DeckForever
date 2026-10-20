@@ -6,8 +6,9 @@
 ## Author: oakho
 ## X-Website: https://github.com/oakho/DeckForever
 ## X-License: MIT
-## OptionalDeps: EasyController
+## OptionalDeps: EasyController, TomTom
 ## SavedVariables: DeckForeverDB
 
 DeckForever.lua
 Legend.lua
+Waypoint.lua

@@ -8,6 +8,8 @@ User-facing strings are French; code and comments are English.
   (minimap, chat, tooltip, quests, class action), the fader (combat mode, `FADED`), the secure state
   driver (`CalmDriver`), the XP bar, fonts.
 - `Legend.lua`: our gamepad help, redrawn from Blizzard's `GamepadPersistentInputLegend`.
+- `Waypoint.lua`: TomTom's arrow on the followed (or closest watched) quest; TomTom's own quest
+  integration is retail-only (this client is WOW_PROJECT_ID 18).
 - `tools/`: dev only (not packaged): in-game test scripts and the `!DiagErreurs` diagnostics addon.
 
 ## Rules learned the hard way (taint)

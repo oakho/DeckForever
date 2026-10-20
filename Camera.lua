@@ -16,7 +16,7 @@ local CVARS = {
 	cameraDistanceMaxZoomFactor = 2.6,         -- up to 39 yards away (mounted, vehicles)
 	-- the view tilts with the zoom, the character a little low in it (ActionCam's dynamic pitch)
 	test_cameraDynamicPitch = 1,
-	test_cameraDynamicPitchBaseFovPad = 0.35,
+	test_cameraDynamicPitchBaseFovPad = 0.6,       -- (higher: the character higher on screen, as measured)
 	test_cameraDynamicPitchBaseFovPadFlying = 0.75,
 	test_cameraDynamicPitchBaseFovPadDownScale = 0.25,
 	test_cameraDynamicPitchSmartPivotCutoffDist = 10,

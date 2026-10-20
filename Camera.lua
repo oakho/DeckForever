@@ -41,10 +41,14 @@ local ZOOMS = {
 	["170"] = { min = 20, max = 26 },          -- vehicle
 }
 
--- The game's "keep the character centred" (motion sickness) option cancels the shoulder offset;
--- DynamicCam says it turns it off, but here it stays on: off with our profile, at each login too
+-- The game's "keep the character centred" (motion sickness) option cancels the shoulder offset. With
+-- a controller, Blizzard's gamepad code holds it on in a temporary layer over the saved setting (so
+-- setting it alone does nothing): off in both, with our profile, at each login and each time the
+-- controller comes back
+local CENTRED = "CameraKeepCharacterCentered"
 local function Uncentre()
-	if GetCVar("CameraKeepCharacterCentered") ~= "0" then SetCVar("CameraKeepCharacterCentered", 0) end
+	if C_CVar and C_CVar.SetTempCVar then pcall(C_CVar.SetTempCVar, CENTRED, "0") end
+	if GetCVar(CENTRED) ~= "0" then SetCVar(CENTRED, 0) end
 end
 
 local function DynamicCam()
@@ -54,9 +58,11 @@ end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
+for _, e in ipairs({ "GAME_PAD_ACTIVE_CHANGED", "GAME_PAD_CONNECTED" }) do pcall(f.RegisterEvent, f, e) end
 f:SetScript("OnEvent", function()
 	local DC = DynamicCam()
-	if DC and DC.db and DC.db:GetCurrentProfile() == PROFILE then Uncentre() end
+	-- (after the gamepad code has set its own layer)
+	if DC and DC.db and DC.db:GetCurrentProfile() == PROFILE then C_Timer.After(0.5, Uncentre) end
 end)
 
 function ns.CameraProfile(print)

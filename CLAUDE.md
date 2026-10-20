@@ -27,6 +27,9 @@ breaks the loop). So:
 - Don't resize Blizzard containers whose OnSizeChanged runs layout code (quest tracker): move or
   narrow their children instead.
 - Some text is a secret value (unit bars): never compare or concatenate it; wrap reads in `pcall`.
+- With a controller, Blizzard's gamepad code holds some CVars in a temporary layer over the saved
+  value (`CameraKeepCharacterCentered` = 1, which cancels any camera shoulder offset): `SetCVar` then
+  "works" but changes nothing; use `C_CVar.SetTempCVar` too, again when the controller comes back.
 - Edit Mode settings that exist in `Enum` may do nothing in this client (StatusTrackingBar
   Width/Height): measure before relying on one.
 

@@ -94,6 +94,14 @@ f:SetScript("OnEvent", function(_, event)
 			DeckForeverDB.arrowPlaced = true
 			arrow.position = { "TOP", nil, "TOP", 0, -M }
 		end
+		-- TomTom's coordinates block off (it sat between the unit frames; the minimap shows them), once,
+		-- in TomTom's own setting: turned back on in its options as any other
+		local block = TomTom.profile and TomTom.profile.block
+		if block and not DeckForeverDB.coordsOff then
+			DeckForeverDB.coordsOff = true
+			block.enable = false
+			if TomTom.ShowHideCoordBlock then pcall(TomTom.ShowHideCoordBlock, TomTom) end
+		end
 		for _, e in ipairs({ "QUEST_POI_UPDATE", "QUEST_LOG_UPDATE", "QUEST_WATCH_LIST_CHANGED",
 			"SUPER_TRACKING_CHANGED", "ZONE_CHANGED_NEW_AREA" }) do
 			pcall(f.RegisterEvent, f, e)

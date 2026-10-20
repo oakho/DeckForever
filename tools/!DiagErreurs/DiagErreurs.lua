@@ -113,7 +113,7 @@ local function Survey()
 				local key = root .. "|" .. (fo and fo:GetName() or "-") .. "|" .. string.format("%.1f", size or 0)
 				if not seen[key] then
 					seen[key] = true
-					fonts[#fonts + 1] = key .. "|" .. tostring(flags) .. "|" .. (r:GetName() or "?") .. "|" .. (pcall(function() return (r:GetText() or ""):sub(1, 30) end) and select(2, pcall(function() return (r:GetText() or ""):sub(1, 30) end)) or "secret")
+					fonts[#fonts + 1] = key .. "|" .. tostring(flags) .. "|" .. (r:GetName() or ((r:GetParent() and r:GetParent():GetDebugName() or "") .. ">?")) .. "|" .. (pcall(function() return (r:GetText() or ""):sub(1, 30) end) and select(2, pcall(function() return (r:GetText() or ""):sub(1, 30) end)) or "secret")
 				end
 			end
 		end

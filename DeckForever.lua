@@ -471,6 +471,7 @@ end
 -- point less: their bars are barely taller. Fonts aren't protected
 local FONT_OBJECTS = { ObjectiveTrackerLineFont = 2, ObjectiveTrackerHeaderFont = 2, TextStatusBarText = 1 }
 local FONT_STRINGS = { PlayerName = 2, MinimapZoneText = 2, TimeManagerClockTicker = 2 }
+local EC_LABELS = 13
 local enlarged = {}
 local function Enlarge(object, bigger)
 	if not object or enlarged[object] or (object.IsForbidden and object:IsForbidden()) then return end
@@ -485,6 +486,20 @@ local function BiggerText()
 	local target = _G.TargetFrame
 	local main = target and target.TargetFrameContent and target.TargetFrameContent.TargetFrameContentMain
 	Enlarge(main and main.Name, 2)
+	-- the coordinates under the minimap (font strings of no name, on the container's PlayerCoords)
+	local container = MinimapCluster and MinimapCluster.MinimapContainer
+	local coords = container and container.PlayerCoords
+	for _, r in ipairs(coords and { coords:GetRegions() } or {}) do
+		if r:GetObjectType() == "FontString" then Enlarge(r, 2) end
+	end
+	-- the names Easy Controller writes by the minimap's dots: its own setting (7..16, its 10 read as 8
+	-- at the minimap's zoom), set once
+	local ec = _G.ControllerKeyboard
+	local labels = ec and ec.db and ec.db.settings and ec.db.settings.minimapLabels
+	if type(labels) == "table" and not DeckForeverDB.ecLabelsSet then
+		DeckForeverDB.ecLabelsSet = true
+		if (labels.size or 10) < EC_LABELS then labels.size = EC_LABELS end
+	end
 end
 
 -- The unit frames' health and power shown as numbers (the game's own option, Status Text): set once,

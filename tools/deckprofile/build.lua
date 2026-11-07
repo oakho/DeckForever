@@ -114,3 +114,27 @@ do
   sv.save(path, env, order)
   print("EllesmereUI: profile '" .. NAME .. "' from '" .. srcName .. "', active, UI scale " .. TO_SCALE)
 end
+
+---------------------------------------------------------------------------------------------- HorizonSuite
+-- The quest tracker (AishUI's profile, shared by every character): top left, under DeckForever's gamepad
+-- help (Legend.lua: its top at 6, about 100 tall), narrower and shorter for the Deck's screen.
+local function HorizonDeck(p)
+  p.point, p.relPoint, p.x, p.y = "TOPLEFT", "TOPLEFT", 8, -114
+  p.panelWidth = 280
+  p.maxContentHeight, p.maxContentHeightOverworld = 420, 420
+end
+
+do
+  local path = SV .. "/HorizonSuite.lua"
+  local env, order = sv.load(path)
+  local db = env.HorizonDB
+  local srcName = db._deckSource or db.globalProfileKey
+  if srcName == NAME then srcName = "AishUI" end
+  local P = sv.copy(assert(db.profiles[srcName], "HorizonSuite: no source profile"))
+  HorizonDeck(P)
+  db.profiles[NAME] = P
+  db._deckSource = srcName
+  db.globalProfileKey = NAME
+  sv.save(path, env, order)
+  print("HorizonSuite: profile '" .. NAME .. "' from '" .. srcName .. "', active")
+end

@@ -298,6 +298,17 @@ X.deck = function()
   P.healthCircle.anchorPctX, P.healthCircle.anchorPctY, P.healthCircle.x, P.healthCircle.y = 0.394, 0.41, 0, 0
   local c = P.outOfCombatResourceCircle
   c.anchorPctX, c.anchorPctY, c.x, c.y = 0.4006, 0.3925, 0, 0
+  local H = HorizonDB
+  if H and H.profiles then
+    local src = H.profiles["Steam Deck"] or H.profiles[H.globalProfileKey]
+    local p = {} for k, v in pairs(src) do p[k] = v end
+    p.point, p.relPoint, p.x, p.y = "TOPLEFT", "TOPLEFT", 8, -114
+    p.panelWidth = 280
+    p.maxContentHeight, p.maxContentHeightOverworld = 420, 420
+    H.profiles["Steam Deck"] = p
+    if H.globalProfileKey ~= "Steam Deck" then H._deckSource = H.globalProfileKey end
+    H.globalProfileKey = "Steam Deck"
+  end
   ReloadUI()
 end
 

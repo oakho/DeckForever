@@ -323,8 +323,8 @@ end
 
 --------------------------------------------------------------------------------
 -- Combat mode: what isn't needed in a fight fades while in combat (the minimap, the quests, the XP
--- bar, the gamepad help at rest: holding LB or RB brings it back, its targeting actions are of use
--- then), and what's only needed for a fight fades out of it with no target (CalmDriver). Alpha only,
+-- bar), and what's only needed for a fight fades out of it (CalmDriver); the gamepad help shows only
+-- while LB or RB is held, or in menus. Alpha only,
 -- eased over FADE_TIME; nothing is hidden or moved, so a faded frame works as ever
 --------------------------------------------------------------------------------
 local FADE_TIME = 0.25
@@ -348,9 +348,11 @@ local FADED = {
 	ObjectiveTrackerFrame = function()
 		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
 	end,
+	-- the gamepad help: hidden at rest (its moves are known by heart); shown while LB or RB is held (their
+	-- groups) and in menus
 	DeckForeverLegend = function(legend)
 		local resting = legend.group == nil or legend.group == "GAMEPLAY"
-		return (Fighting() and resting) and IN_COMBAT_ALPHA or 1
+		return resting and 0 or 1
 	end,
 	-- the cooldown rows between the unit frames, with the player frame and the bars (as CalmDriver's
 	-- rule: in combat or with a target; these aren't protected, so faded from here, eased)

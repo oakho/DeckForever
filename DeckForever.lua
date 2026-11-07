@@ -374,34 +374,84 @@ local FADED = {
 -- (the player frame and the gamepad bars aren't faded from here: setting their alpha from an addon's
 -- code made the gamepad UI block SetPreferredGamepadInteractTarget, over and over. CalmDriver does it)
 
--- The player frame and the gamepad bars (Easy Controller's paddles follow the bar's alpha), faded out of
--- combat with no target: by a secure state driver, the game's own way to change protected frames (the
--- alpha is set in its restricted environment, from a macro condition, never from DeckForever's code).
--- Set up once, out of combat; at once, no fade (the driver only switches states)
-local CALM_FRAMES = { "PlayerFrame", "GamepadMainActionBarFrame" }
+-- The player frame and the gamepad bars (Easy Controller's paddles follow the bar's alpha): by a secure
+-- state driver, the game's own way to change protected frames (the alpha is set in its restricted
+-- environment, never from DeckForever's code). Set up once, out of combat; at once, no fade.
+--   * the player frame: faded out of combat with no target (CALM_ALPHA)
+--   * the gamepad bar (immersion): hidden out of combat; shown in combat, and out of combat for
+--     AWAKE_TIME after it is used (a trigger held, a cast: "awake", set below from those: our own
+--     handler's attribute, which addon code may set out of combat). Hidden, it still works: the first
+--     press both acts and shows it. After a fight it stays AWAKE_TIME before hiding.
+local AWAKE_TIME = 5
+local CALM_FRAMES = { { "PlayerFrame", CALM_ALPHA }, { "GamepadMainActionBarFrame", 0, true } }
 local calmDriver
 local function CalmDriver()
 	if calmDriver or InCombatLockdown() or not RegisterStateDriver then return end
 	calmDriver = CreateFrame("Frame", "DeckForeverCalmDriver", UIParent, "SecureHandlerStateTemplate")
 	local n = 0
-	for _, name in ipairs(CALM_FRAMES) do
-		local frame = _G[name]
+	for _, entry in ipairs(CALM_FRAMES) do
+		local frame = _G[entry[1]]
 		if frame and not frame:IsForbidden() then
 			n = n + 1
 			calmDriver:SetFrameRef("calm" .. n, frame)
+			calmDriver:SetAttribute("calmAlpha" .. n, entry[2])
+			calmDriver:SetAttribute("wakes" .. n, entry[3] and true or false)
 		end
 	end
 	calmDriver:SetAttribute("calmCount", n)
-	calmDriver:SetAttribute("calmAlpha", CALM_ALPHA)
-	calmDriver:SetAttribute("_onstate-calm", [[
-		local alpha = newstate == "on" and self:GetAttribute("calmAlpha") or 1
+	-- fight: in combat; target: a target, out of combat; calm: neither
+	calmDriver:SetAttribute("apply", [[
+		local fight = self:GetAttribute("state-calm")
+		local awake = self:GetAttribute("state-awake") == "on"
 		for i = 1, self:GetAttribute("calmCount") do
 			local frame = self:GetFrameRef("calm" .. i)
-			if frame then frame:SetAlpha(alpha) end
+			if frame then
+				local shown
+				if self:GetAttribute("wakes" .. i) then shown = fight == "fight" or awake
+				else shown = fight ~= "calm" end
+				frame:SetAlpha(shown and 1 or self:GetAttribute("calmAlpha" .. i))
+			end
 		end
 	]])
-	RegisterStateDriver(calmDriver, "calm", "[combat][@target,exists] off; on")
+	calmDriver:SetAttribute("_onstate-calm", [[ self:RunAttribute("apply") ]])
+	calmDriver:SetAttribute("_onstate-awake", [[ self:RunAttribute("apply") ]])
+	calmDriver:SetAttribute("state-awake", "off")
+	RegisterStateDriver(calmDriver, "calm", "[combat] fight; [@target,exists] target; calm")
 end
+
+-- What wakes the bar, read from the game's events (nothing hooked; this client has no gamepad button
+-- event): a trigger held (LT / RT act as modifier keys with the gamepad: GamePadEmulateShift / Ctrl / Alt,
+-- and they open the bar's pages), a spell cast or an item used, a spell waiting for its target; the end of
+-- a fight too (the bar stays AWAKE_TIME). Registered through pcall: an event a client lacks is skipped.
+local awakeUntil = 0
+local function Wake()
+	awakeUntil = GetTime() + AWAKE_TIME
+	if calmDriver and not InCombatLockdown() and calmDriver:GetAttribute("state-awake") ~= "on" then
+		calmDriver:SetAttribute("state-awake", "on")
+	end
+end
+do
+	local watcher = CreateFrame("Frame")
+	for _, event in ipairs({ "MODIFIER_STATE_CHANGED", "CURRENT_SPELL_CAST_CHANGED", "PLAYER_REGEN_ENABLED" }) do
+		pcall(watcher.RegisterEvent, watcher, event)
+	end
+	pcall(watcher.RegisterUnitEvent, watcher, "UNIT_SPELLCAST_SENT", "player")
+	watcher:SetScript("OnEvent", function(_, event, key, down)
+		if event == "MODIFIER_STATE_CHANGED" and down ~= 1 then return end    -- (pressed, not let go)
+		Wake()
+	end)
+	local tick = 0
+	watcher:SetScript("OnUpdate", function(_, elapsed)
+		tick = tick + elapsed
+		if tick < 0.25 then return end
+		tick = 0
+		if calmDriver and not InCombatLockdown() and GetTime() > awakeUntil
+			and calmDriver:GetAttribute("state-awake") == "on" then
+			calmDriver:SetAttribute("state-awake", "off")
+		end
+	end)
+end
+
 for _, name in ipairs(CHAT_TABS) do FADED[name] = function() return 0 end end
 local current = {}
 local fader = CreateFrame("Frame")

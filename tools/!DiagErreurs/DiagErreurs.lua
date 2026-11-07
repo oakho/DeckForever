@@ -299,6 +299,23 @@ X.deck = function()
   ReloadUI()
 end
 
+-- cd: DeckForever's CalmDriver state and the gamepad bar's alpha, kept in db.calm (read at the reload)
+X.cd = function()
+  local d = _G.DeckForeverCalmDriver
+  local bar = _G.GamepadMainActionBarFrame
+  db.calm = {
+    driver = d and true or false,
+    calm = d and tostring(d:GetAttribute("state-calm")),
+    awake = d and tostring(d:GetAttribute("state-awake")),
+    count = d and tostring(d:GetAttribute("calmCount")),
+    alpha1 = d and tostring(d:GetAttribute("calmAlpha1")), alpha2 = d and tostring(d:GetAttribute("calmAlpha2")),
+    wakes2 = d and tostring(d:GetAttribute("wakes2")),
+    barAlpha = bar and bar:GetAlpha(), barEffective = bar and bar:GetEffectiveAlpha(),
+    barShown = bar and bar:IsShown(),
+  }
+  print("dgx cd: saved")
+end
+
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
@@ -314,7 +331,7 @@ end
 -- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end }
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

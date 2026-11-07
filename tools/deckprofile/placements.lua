@@ -1,16 +1,17 @@
 -- Where the Deck puts AishUI's blocks: DeckForever's layout of before AishUI (gamepad help top left, chat
--- bottom left, quests top right, minimap bottom right, the combat block over the compact gamepad bar).
+-- bottom left, the game's quests top right (placed by DeckForever), minimap bottom right, the combat block
+-- over the compact gamepad bar).
 -- Absolute values, set on AishUI's "Steam Deck" profiles: build.lua runs this after scaling them,
 -- !DiagErreurs' F10 runs it live (tools/deckprofile/dev-install.sh puts this file into it).
--- A = AishCore's profile, E = EllesmereUI's, H = HorizonSuite's, live = EllesmereUIDB.unlockAnchors (the
+-- A = AishCore's profile, E = EllesmereUI's, live = EllesmereUIDB.unlockAnchors (the
 -- anchors EllesmereUI works with: the profile only keeps a copy, taken at a profile switch or an export),
 -- C = Chattynator's profile.
 -- UIParent units (scale 0.96: Deck px).
-DeckPlacements = function(A, E, H, live, C)
+DeckPlacements = function(A, E, live, C)
 	local M = 8                -- the gap to the screen's edges, as everywhere in DeckForever
 	local B = M + 4            -- from the bottom: over the XP bar
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
-	local QUESTS = MAP         -- the quest tracker's width: the minimap's
+	local QUESTS = 261         -- the game's quest tracker (DeckForever's layout)
 
 	------------------------------------------------------------------ AishCore
 	-- The combat block centred on the screen, below and right of the character (DeckForever's camera puts
@@ -81,15 +82,4 @@ DeckPlacements = function(A, E, H, live, C)
 		C.keep_edit_box_visible = false
 		C.show_tabs_1 = "hover"
 	end
-
-	------------------------------------------------------------------ HorizonSuite
-	-- the quests top right
-	H.point, H.relPoint, H.x, H.y = "TOPRIGHT", "TOPRIGHT", -M, -M
-	H.panelWidth = QUESTS
-	H.titleFontSize = 11      -- (13 wraps most titles at the minimap's width, over their objectives)
-	-- its button for the focused quest's item (from the bottom left; AishUI's place was off the top):
-	-- left of the minimap's top
-	H.floatingQuestItemPoint, H.floatingQuestItemRelPoint = "TOPRIGHT", "BOTTOMLEFT"
-	H.floatingQuestItemX, H.floatingQuestItemY = 1280 - M - MAP - M, B + MAP
-	H.maxContentHeight, H.maxContentHeightOverworld = 420, 420
 end

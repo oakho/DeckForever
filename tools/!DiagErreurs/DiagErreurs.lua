@@ -291,11 +291,10 @@ end
 X.deck = function()
   local A = AishaddonDB and AishaddonDB._profiles and AishaddonDB._profiles["Steam Deck"]
   local E = EllesmereUIDB and EllesmereUIDB.profiles and EllesmereUIDB.profiles["Steam Deck"]
-  local H = HorizonDB and HorizonDB.profiles and HorizonDB.profiles["Steam Deck"]
-  if not (A and E and H and DeckPlacements) then print("dgx deck: a Steam Deck profile is missing (tools/deckprofile/build.lua)") return end
+  if not (A and E and DeckPlacements) then print("dgx deck: a Steam Deck profile is missing (tools/deckprofile/build.lua)") return end
   EllesmereUIDB.unlockAnchors = EllesmereUIDB.unlockAnchors or {}
   local C = CHATTYNATOR_CONFIG and CHATTYNATOR_CONFIG.Profiles and CHATTYNATOR_CONFIG.Profiles.DEFAULT
-  DeckPlacements(A, E, H, EllesmereUIDB.unlockAnchors, C)
+  DeckPlacements(A, E, EllesmereUIDB.unlockAnchors, C)
   ReloadUI()
 end
 
@@ -316,6 +315,13 @@ X.cd = function()
   print("dgx cd: saved")
 end
 
+-- hz: HorizonSuite off for this character (the game's quest tracker instead: made for the gamepad), reload
+X.hz = function()
+  local disable = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
+  disable("HorizonSuite", UnitName("player"))
+  ReloadUI()
+end
+
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
@@ -331,7 +337,7 @@ end
 -- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end }
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end, F8 = function() X.hz() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

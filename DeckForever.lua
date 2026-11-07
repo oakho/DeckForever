@@ -361,6 +361,11 @@ local FADED = {
 		local box = _G.ChatFrame1EditBox
 		return box and box:HasFocus() and 1 or CHAT_ALPHA
 	end,
+	-- Chattynator's windows (their parent), the same
+	ChattynatorHyperlinkHandler = function(frame)
+		local box = _G.ChatFrame1EditBox
+		return box and box:HasFocus() and 1 or CHAT_ALPHA
+	end,
 	-- the line you type in: only while you type (the gamepad UI keeps it shown, at 35 %, all the time)
 	ChatFrame1EditBox = function(box) return box:HasFocus() and 1 or 0 end,
 	EssentialCooldownViewer = function() return (Fighting() or UnitExists("target")) and 1 or CALM_ALPHA end,
@@ -466,9 +471,47 @@ end)
 -- a tooltip backdrop behind it (a plain frame: not protected)
 local EDIT_ART = { "Left", "Mid", "Right", "FocusLeft", "FocusMid", "FocusRight" }
 local editSkinned
+-- AishUI's Chattynator draws the chat itself (its window placed by its profile, tools/deckprofile): the
+-- game's chat frame is hidden, and Chattynator styles and places the line you type in
+local function Chattynator()
+	return C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Chattynator")
+end
+
+-- Chattynator's tabs: only while you type (so the channel can be picked) or under the mouse; never over
+-- an empty chat otherwise. Its "hover" mode hides them only as it builds them, so a rebuilt tab bar stays
+-- shown: they are held to that here, hidden 2 s after the last reason to show them (Chattynator's own
+-- delay). The line's focus is read each frame (no hook on the game's edit box).
+do
+	local HOLD = 2
+	local watcher = CreateFrame("Frame")
+	local since = {}
+	watcher:SetScript("OnUpdate", function(_, elapsed)
+		if not Chattynator() then return end
+		local box = _G.ChatFrame1EditBox
+		local typing = box and box:HasFocus() or false
+		local parent = _G.ChattynatorHyperlinkHandler
+		for _, window in ipairs(parent and { parent:GetChildren() } or {}) do
+			local tabs = window.TabsBar
+			if tabs and not tabs.lockActive then        -- (lockActive: tabs set to always show)
+				if typing or tabs:IsMouseOver() then
+					since[tabs] = 0
+					if tabs:GetAlpha() < 1 then tabs:SetAlpha(1) end
+					tabs.active = true
+				else
+					since[tabs] = (since[tabs] or 0) + elapsed
+					if since[tabs] >= HOLD and tabs:GetAlpha() > 0 then
+						tabs:SetAlpha(0)
+						tabs.active = false
+					end
+				end
+			end
+		end
+	end)
+end
+
 local function SkinEditBox()
 	local box = _G.ChatFrame1EditBox
-	if editSkinned or not box or box:IsForbidden() then return end
+	if editSkinned or not box or box:IsForbidden() or Chattynator() then return end
 	editSkinned = true
 	for _, piece in ipairs(EDIT_ART) do
 		local tex = _G["ChatFrame1EditBox" .. piece]
@@ -724,7 +767,7 @@ end
 
 local function PlaceChat()
 	local chat = _G.ChatFrame1
-	if not chat or chat:IsForbidden() or InCombatLockdown() then return end
+	if not chat or chat:IsForbidden() or InCombatLockdown() or Chattynator() then return end
 	local layouts, active = Layouts()
 	local layout = layouts[active]
 	if not layout or layout.layoutName ~= TARGET_LAYOUT or layout.layoutType == Enum.EditModeLayoutType.Preset then return end

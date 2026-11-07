@@ -294,7 +294,8 @@ X.deck = function()
   local H = HorizonDB and HorizonDB.profiles and HorizonDB.profiles["Steam Deck"]
   if not (A and E and H and DeckPlacements) then print("dgx deck: a Steam Deck profile is missing (tools/deckprofile/build.lua)") return end
   EllesmereUIDB.unlockAnchors = EllesmereUIDB.unlockAnchors or {}
-  DeckPlacements(A, E, H, EllesmereUIDB.unlockAnchors)
+  local C = CHATTYNATOR_CONFIG and CHATTYNATOR_CONFIG.Profiles and CHATTYNATOR_CONFIG.Profiles.DEFAULT
+  DeckPlacements(A, E, H, EllesmereUIDB.unlockAnchors, C)
   ReloadUI()
 end
 

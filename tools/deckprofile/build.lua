@@ -1,4 +1,5 @@
--- Builds the "Steam Deck" profiles of AishUI (AishCore, EllesmereUI, HorizonSuite) from AishUI's own ones,
+-- Builds the "Steam Deck" profiles of AishUI (AishCore, EllesmereUI, HorizonSuite) from AishUI's own ones
+-- (and places Chattynator's window),
 -- in the account's SavedVariables. Run with WoW CLOSED (the game rewrites SavedVariables when it quits).
 --
 --   lua build.lua <WTF/Account/<account>/SavedVariables>
@@ -88,8 +89,13 @@ local H = sv.copy(assert(hz.profiles[hz._deckSource], "HorizonSuite: no source p
 hz.profiles[NAME] = H
 hz.globalProfileKey = NAME
 
+-------------------------------------------------------------------------------------------- Chattynator
+-- (one profile, DEFAULT: set in place)
+local ct = open("Chattynator").CHATTYNATOR_CONFIG
+local C = ct and ct.Profiles and ct.Profiles.DEFAULT
+
 -------------------------------------------------------------------------------------------- the Deck
-DeckPlacements(A, E, H, db.unlockAnchors)
+DeckPlacements(A, E, H, db.unlockAnchors, C)
 for _, f in ipairs(files) do sv.save(f.path, f.env, f.order) end
 print(("'%s' built and active: AishCore from '%s', EllesmereUI from '%s' (UI scale %s), HorizonSuite from '%s'")
 	:format(NAME, D._deckSource, db._deckSource, TO_SCALE, hz._deckSource))

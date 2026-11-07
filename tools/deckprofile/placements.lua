@@ -3,13 +3,14 @@
 -- Absolute values, set on AishUI's "Steam Deck" profiles: build.lua runs this after scaling them,
 -- !DiagErreurs' F10 runs it live (tools/deckprofile/dev-install.sh puts this file into it).
 -- A = AishCore's profile, E = EllesmereUI's, H = HorizonSuite's, live = EllesmereUIDB.unlockAnchors (the
--- anchors EllesmereUI works with: the profile only keeps a copy, taken at a profile switch or an export).
+-- anchors EllesmereUI works with: the profile only keeps a copy, taken at a profile switch or an export),
+-- C = Chattynator's profile.
 -- UIParent units (scale 0.96: Deck px).
-DeckPlacements = function(A, E, H, live)
+DeckPlacements = function(A, E, H, live, C)
 	local M = 8                -- the gap to the screen's edges, as everywhere in DeckForever
 	local B = M + 4            -- from the bottom: over the XP bar
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
-	local QUESTS = 260         -- the quest tracker's width
+	local QUESTS = MAP         -- the quest tracker's width: the minimap's
 
 	------------------------------------------------------------------ AishCore
 	-- The combat block centred on the screen, below and right of the character (DeckForever's camera puts
@@ -30,17 +31,13 @@ DeckPlacements = function(A, E, H, live)
 	h.anchorPctX, h.anchorPctY, h.x, h.y = 0.394, 0.41, 0, 0
 	r.anchorPctX, r.anchorPctY, r.x, r.y = 0.4006, 0.3925, 0, 0
 	w.anchorPctX, w.anchorPctY, w.x, w.y = 0.488, 0.41, 0, 0
-	-- the consumables (dynamic bar 2, out of combat: AishUI's place was off the screen, clamped onto the
-	-- minimap): bottom right on the supplies' line, left of Easy Controller's supplies (DeckForever's /df go
-	-- puts them M left of the minimap, about 34 wide). Placed by its centre, 49 tall.
+	-- not on the Deck: the consumables (dynamic bar 2), the zone's name (wider than the minimap it sat
+	-- over: EllesmereUI's minimap shows it instead, inside), the auto turn-in box (top left)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]
-	if consumables then
-		consumables.anchor = "CENTER"
-		consumables.x, consumables.y = 640 - (M + MAP + M + 34 + M), -(400 - B - 49 / 2)   -- (measured: its centre sits M left of the supplies)
-	end
-	-- the zone's name over the minimap, right-aligned with it
-	local loc = A.location
-	loc.point, loc.relativePoint, loc.x, loc.y = "BOTTOMRIGHT", "BOTTOMRIGHT", -M, B + MAP + 4
+	if consumables then consumables.enabled = false end
+	A.location.enabled = false
+	A.comfort = A.comfort or {}
+	A.comfort.questTurnInBox = false
 
 	------------------------------------------------------------------ EllesmereUI (unlock-mode anchors)
 	-- An anchor to a screen edge holds one axis (SCREEN_LEFT/RIGHT: X, TOP/BOTTOM: Y): the main one and its
@@ -49,9 +46,18 @@ DeckPlacements = function(A, E, H, live)
 	-- bottom; BOTTOM of SCREEN_TOP -> its top - the screen's top.
 	-- the minimap's own position (EllesmereUIMinimap: a point on the screen's centre; 640 x 400 from it to
 	-- the edges): its border M from the right edge, B from the bottom
+	-- On it: the place's name at its top (the subzone's, shorter; held to the map's width), the coordinates
+	-- at its bottom right
 	local mm = E.addons.EllesmereUIMinimap and E.addons.EllesmereUIMinimap.minimap
 	if mm then
 		mm.position = { point = "CENTER", relPoint = "CENTER", x = 640 - M - MAP / 2, y = -(400 - B - MAP / 2) }
+		mm.locationMode, mm.locationPosition, mm.zoneShowSubZone = "inside", "top", true
+		mm.coordsPosition = "bottomRight"
+	end
+	-- the clock, FPS and latency strip under the minimap (data bar "Minimap Companion"): not on the Deck
+	local dataBars = E.addons.EllesmereUIDataBars and E.addons.EllesmereUIDataBars.bars
+	for _, bar in pairs(dataBars or {}) do
+		if bar.name == "Minimap Companion" then bar.visibility = "never" end
 	end
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -M, offsetY = 0,
@@ -63,9 +69,27 @@ DeckPlacements = function(A, E, H, live)
 			edge = { key = "SCREEN_RIGHT", side = "LEFT", offset = -(M + QUESTS + M) } }
 	end
 
+	------------------------------------------------------------------ Chattynator
+	-- The chat as in DeckForever's first layout: bottom left, M from the left edge, over the XP bar (B),
+	-- as tall as the minimap with the zone's name over it; the line you type in over its top lines, shown
+	-- only while you type; the tabs only under the mouse (never with the gamepad). Its 65 % brightness,
+	-- full while you type: DeckForever's fader (ChattynatorHyperlinkHandler, its windows' parent).
+	if C and C.windows and C.windows[1] then
+		C.windows[1].position = { "BOTTOMLEFT", "UIParent", "BOTTOMLEFT", M, B }
+		C.windows[1].size = { 312, MAP + 18 }
+		C.edit_box_position = "top"
+		C.keep_edit_box_visible = false
+		C.show_tabs_1 = "hover"
+	end
+
 	------------------------------------------------------------------ HorizonSuite
 	-- the quests top right
 	H.point, H.relPoint, H.x, H.y = "TOPRIGHT", "TOPRIGHT", -M, -M
 	H.panelWidth = QUESTS
+	H.titleFontSize = 11      -- (13 wraps most titles at the minimap's width, over their objectives)
+	-- its button for the focused quest's item (from the bottom left; AishUI's place was off the top):
+	-- left of the minimap's top
+	H.floatingQuestItemPoint, H.floatingQuestItemRelPoint = "TOPRIGHT", "BOTTOMLEFT"
+	H.floatingQuestItemX, H.floatingQuestItemY = 1280 - M - MAP - M, B + MAP
 	H.maxContentHeight, H.maxContentHeightOverworld = 420, 420
 end

@@ -273,3 +273,59 @@ SlashCmdList.DIAGTIP = function()
 	end)
 	C_Timer.After(3, function() GameTooltip:Hide() end)
 end
+
+-- /dgx WORD : runs a dev snippet by name (typed commands can't carry Lua: the AZERTY keyboard under
+-- xdotool mangles brackets and quotes). Edit the table, /reload, then /dgx WORD.
+local X = {}
+
+-- pv: AishCore unit bars preview (its settings panel, shown invisible, forces every bar on); again to stop
+X.pv = function()
+  local p = _G.AishCoreSettingsPanel
+  if not p and SlashCmdList.AISHCORE then SlashCmdList.AISHCORE(""); p = _G.AishCoreSettingsPanel end
+  if not p then print("dgx pv: no AishCore panel") return end
+  if p:IsShown() and p:GetScale() < 0.1 then p:Hide(); p:SetScale(1) else p:Show(); p:SetScale(0.01) end
+end
+
+-- deck: the Deck placements of tools/deckprofile/build.lua, live (WoW keeps them at the /reload)
+X.deck = function()
+  local P = AishaddonDB and AishaddonDB._profiles and AishaddonDB._profiles["Steam Deck"]
+  if not P then print("dgx deck: no Steam Deck profile") return end
+  local CX = 0
+  P.resourceCircle.x = CX
+  P.castBar.x, P.castBar.y = CX, 175
+  local b = P.unitBars.bars
+  b.player.x, b.target.x, b.focus.x = CX - 179, CX + 179, CX + 450
+  P.healthCircle.anchorPctX, P.healthCircle.anchorPctY, P.healthCircle.x, P.healthCircle.y = 0.394, 0.41, 0, 0
+  local c = P.outOfCombatResourceCircle
+  c.anchorPctX, c.anchorPctY, c.x, c.y = 0.4006, 0.3925, 0, 0
+  ReloadUI()
+end
+
+-- sc: prints UIParent's scale and Ellesmere's saved one
+X.sc = function()
+  print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
+end
+
+SLASH_DIAGDEV1 = "/dgx"
+SlashCmdList.DIAGDEV = function(msg)
+  local f = X[(msg or ""):match("^%s*(%S+)") or ""]
+  if f then local ok, err = pcall(f) if not ok then print("dgx:", err) end
+  else local k = {} for n in pairs(X) do k[#k + 1] = n end table.sort(k) print("dgx: " .. table.concat(k, " ")) end
+end
+
+-- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
+-- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
+do
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end }
+  local owner = CreateFrame("Frame")
+  owner:RegisterEvent("PLAYER_ENTERING_WORLD")
+  owner:SetScript("OnEvent", function()
+    if InCombatLockdown() then return end
+    for key, fn in pairs(keys) do
+      local name = "DiagDevKey" .. key
+      local b = _G[name] or CreateFrame("Button", name, UIParent)
+      b:SetScript("OnClick", function() local ok, err = pcall(fn) if not ok then print("dgx key:", err) end end)
+      SetOverrideBindingClick(owner, true, key, name)
+    end
+  end)
+end

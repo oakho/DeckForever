@@ -286,29 +286,15 @@ X.pv = function()
   if p:IsShown() and p:GetScale() < 0.1 then p:Hide(); p:SetScale(1) else p:Show(); p:SetScale(0.01) end
 end
 
--- deck: the Deck placements of tools/deckprofile/build.lua, live (WoW keeps them at the /reload)
+-- deck: the Deck placements (tools/deckprofile/placements.lua, put ahead of this file by dev-install.sh)
+-- on the live "Steam Deck" profiles; WoW keeps them at the /reload
 X.deck = function()
-  local P = AishaddonDB and AishaddonDB._profiles and AishaddonDB._profiles["Steam Deck"]
-  if not P then print("dgx deck: no Steam Deck profile") return end
-  local CX = 0
-  P.resourceCircle.x = CX
-  P.castBar.x, P.castBar.y = CX, 175
-  local b = P.unitBars.bars
-  b.player.x, b.target.x, b.focus.x = CX - 179, CX + 179, CX + 450
-  P.healthCircle.anchorPctX, P.healthCircle.anchorPctY, P.healthCircle.x, P.healthCircle.y = 0.394, 0.41, 0, 0
-  local c = P.outOfCombatResourceCircle
-  c.anchorPctX, c.anchorPctY, c.x, c.y = 0.4006, 0.3925, 0, 0
-  local H = HorizonDB
-  if H and H.profiles then
-    local src = H.profiles["Steam Deck"] or H.profiles[H.globalProfileKey]
-    local p = {} for k, v in pairs(src) do p[k] = v end
-    p.point, p.relPoint, p.x, p.y = "TOPLEFT", "TOPLEFT", 8, -114
-    p.panelWidth = 280
-    p.maxContentHeight, p.maxContentHeightOverworld = 420, 420
-    H.profiles["Steam Deck"] = p
-    if H.globalProfileKey ~= "Steam Deck" then H._deckSource = H.globalProfileKey end
-    H.globalProfileKey = "Steam Deck"
-  end
+  local A = AishaddonDB and AishaddonDB._profiles and AishaddonDB._profiles["Steam Deck"]
+  local E = EllesmereUIDB and EllesmereUIDB.profiles and EllesmereUIDB.profiles["Steam Deck"]
+  local H = HorizonDB and HorizonDB.profiles and HorizonDB.profiles["Steam Deck"]
+  if not (A and E and H and DeckPlacements) then print("dgx deck: a Steam Deck profile is missing (tools/deckprofile/build.lua)") return end
+  EllesmereUIDB.unlockAnchors = EllesmereUIDB.unlockAnchors or {}
+  DeckPlacements(A, E, H, EllesmereUIDB.unlockAnchors)
   ReloadUI()
 end
 

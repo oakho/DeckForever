@@ -90,6 +90,13 @@ local LAYOUT = {
 -- HUD in the bottom-right corner, left of the minimap, growing left. Its old position is kept in DeckForeverDB.easyController
 local EC_SUPPLIES = { pos = { point = "BOTTOMRIGHT", x = -(M + 273 + M), y = B }, layout = "left" }
 
+-- AishUI's EllesmereUI has a minimap of its own (placed by its "Steam Deck" profile,
+-- tools/deckprofile): then the game's minimap isn't ours to square or move, and Easy Controller's
+-- supplies go left of that one (203 wide; /df go)
+local function EllesmereMap()
+	return C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("EllesmereUIMinimap")
+end
+
 local function Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffDeckForever|r " .. msg)
 end
@@ -163,7 +170,7 @@ local SQUARE_MASK = "Interface\\Buttons\\WHITE8X8"
 local mapBorder
 local function SquareMinimap()
 	local map = _G.Minimap
-	if not map or map:IsForbidden() then return end
+	if not map or map:IsForbidden() or EllesmereMap() then return end
 	map:SetMaskTexture(SQUARE_MASK)
 	if _G.MinimapCompassTexture then MinimapCompassTexture:SetAlpha(0) end
 	if _G.MinimapCompassTextureUnderlay then MinimapCompassTextureUnderlay:SetAlpha(0) end
@@ -200,6 +207,13 @@ function PlaceMinimap()
 	local map = _G.Minimap
 	local container = cluster and cluster.MinimapContainer
 	if not (container and map) or map:IsForbidden() then return end
+	if EllesmereMap() then
+		-- EllesmereUI takes the map and shows the coordinates on it: the game's coordinates and day / night
+		-- icon, left in its empty container, are hidden (display only)
+		if container.PlayerCoords then container.PlayerCoords:SetAlpha(0) end
+		if cluster.DielFrame then cluster.DielFrame:SetAlpha(0) end
+		return
+	end
 	local scale = container:GetScale()
 	local half = map:GetWidth() / 2
 	container:ClearAllPoints()
@@ -674,6 +688,7 @@ local function Apply()
 		DeckForeverDB.easyController = DeckForeverDB.easyController
 			or { pos = supplies.pos and CopyTable(supplies.pos), layout = supplies.layout }
 		supplies.pos = CopyTable(EC_SUPPLIES.pos)
+		if EllesmereMap() then supplies.pos.x = -(M + 203 + M) end
 		supplies.layout = EC_SUPPLIES.layout
 	end
 	Print(("« %s » enregistrée (%d éléments)."):format(TARGET_LAYOUT, moved))

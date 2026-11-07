@@ -1,15 +1,17 @@
--- Builds the "Steam Deck" profiles of AishUI (AishCore + EllesmereUI) from AishUI's own ones, in the
--- account's SavedVariables. Run with WoW CLOSED (the game rewrites SavedVariables when it quits).
+-- Builds the "Steam Deck" profiles of AishUI (AishCore, EllesmereUI, HorizonSuite) from AishUI's own ones,
+-- in the account's SavedVariables. Run with WoW CLOSED (the game rewrites SavedVariables when it quits).
 --
 --   lua build.lua <WTF/Account/<account>/SavedVariables>
 --
--- AishUI is laid out for a big screen at UI scale 0.62. The Deck wants 0.96 (768 / 800 physical px).
--- Every offset measured from the screen is multiplied by K = 0.62 / 0.96, so each block keeps its place
--- on screen while drawn 1.55 times bigger; offsets between two blocks stay as they are (they are
--- drawn bigger with their blocks). Then the Deck changes (see DECK below).
+-- AishUI is laid out for a big screen at UI scale 0.62; the Deck wants 0.96 (768 / 800 physical px).
+-- Every offset measured from the screen is first multiplied by K = 0.62 / 0.96, so each block keeps its
+-- place on screen while drawn 1.55 times bigger (offsets between two blocks stay: they grow with their
+-- blocks). Then placements.lua puts the blocks where the Deck wants them. Rerun after an AishUI update:
+-- its installer rewrites these SavedVariables; each profile is built again from AishUI's (_deckSource).
 local dir = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = dir .. "/?.lua;" .. package.path
 local sv = require("sv")
+dofile(dir .. "/placements.lua")
 
 local SV = assert(arg[1], "usage: lua build.lua <SavedVariables dir>")
 local NAME = "Steam Deck"
@@ -18,123 +20,76 @@ local K = FROM_SCALE / TO_SCALE
 
 local function round(v) return math.floor(v * 10 + 0.5) / 10 end
 local function scale(t, ...)
-  for _, f in ipairs({ ... }) do
-    if type(t[f]) == "number" then t[f] = round(t[f] * K) end
-  end
+	for _, f in ipairs({ ... }) do
+		if type(t[f]) == "number" then t[f] = round(t[f] * K) end
+	end
 end
 
----------------------------------------------------------------------------------------------- AishCore
-do
-  local path = SV .. "/AishCore.lua"
-  local env, order = sv.load(path)
-  local D = env.AishaddonDB
-  local src = D._profiles[D._deckSource or D._globalProfile]
-  if D._globalProfile == NAME then src = D._profiles[D._deckSource or "Default"] end
-  assert(src, "AishCore: no source profile")
-  local P = sv.copy(src)
-
-  -- Blocks placed on UIParent (offsets from the screen)
-  for _, k in ipairs({ "castBar", "focusCastBar", "targetCastBar", "location", "menuBar", "resourceCircle",
-                       "rotationHelper", "skyriding", "addonCompartment" }) do
-    if type(P[k]) == "table" then scale(P[k], "x", "y") end
-  end
-  for _, b in pairs(P.extraBars and P.extraBars.bars or {}) do scale(b, "x", "y") end
-  for _, b in pairs(P.unitBars and P.unitBars.bars or {}) do scale(b, "x", "y") end
-
-  -- DECK: the combat block stays centred on the screen, below and right of the character (which
-  -- DeckForever's DynamicCam profile puts left of the centre), over the compact gamepad bar (its top
-  -- 161 units up). The out-of-combat circles go with the character instead: by its left side, at its
-  -- knees (measured at the default zoom: the character at 44 % of the width, its knees at 41 % of
-  -- the height). They are placed in fractions of the screen (anchorPct, from the bottom left).
-  local CX = 0
-  if P.resourceCircle then P.resourceCircle.x = CX end
-  if P.castBar then P.castBar.x, P.castBar.y = CX, 175 end   -- from the screen's bottom, over the gamepad bar
-  if P.healthCircle then
-    P.healthCircle.anchorPctX, P.healthCircle.anchorPctY, P.healthCircle.x, P.healthCircle.y = 0.394, 0.41, 0, 0
-  end
-  if P.outOfCombatResourceCircle then
-    local c = P.outOfCombatResourceCircle
-    c.anchorPctX, c.anchorPctY, c.x, c.y = 0.4006, 0.3925, 0, 0
-  end
-
-  -- DECK: the pet under the player, the target's target under the target (they were spread out on
-  -- the sides, across the whole width). Unit bars sit by their BOTTOM on the screen's centre;
-  -- "parent" layout = the reference bar's position + relX / relY.
-  local bars = P.unitBars and P.unitBars.bars
-  if bars then
-    if bars.player then bars.player.x = CX - 179 end
-    if bars.target then bars.target.x = CX + 179 end
-    if bars.focus then bars.focus.x = CX + 450 end
-    local under = -30
-    if bars.pet then
-      bars.pet.layout, bars.pet.mirrorOf, bars.pet.relX, bars.pet.relY = "parent", "player", 0, under
-      bars.pet.width = 140
-    end
-    if bars.targettarget then
-      bars.targettarget.layout, bars.targettarget.mirrorOf = "parent", "target"
-      bars.targettarget.relX, bars.targettarget.relY = 0, under
-      bars.targettarget.width = 140
-    end
-  end
-
-  D._profiles[NAME] = P
-  D._deckSource = D._deckSource or D._globalProfile
-  D._globalProfile = NAME
-  sv.save(path, env, order)
-  print("AishCore: profile '" .. NAME .. "' from '" .. D._deckSource .. "', active")
+local files = {}
+local function open(name)
+	local path = SV .. "/" .. name .. ".lua"
+	local env, order = sv.load(path)
+	files[#files + 1] = { path = path, env = env, order = order }
+	return env
 end
 
----------------------------------------------------------------------------------------------- EllesmereUI
-do
-  local path = SV .. "/EllesmereUI.lua"
-  local env, order = sv.load(path)
-  local db = env.EllesmereUIDB
-  local srcName = db._deckSource or db.activeProfile
-  if srcName == NAME then srcName = db.lastNonSpecProfile end
-  local P = sv.copy(assert(db.profiles[srcName], "EllesmereUI: no source profile"))
-
-  -- Unlock-mode anchors: offsets from the screen's edges or centre
-  for _, a in pairs(P.unlockLayout and P.unlockLayout.anchors or {}) do
-    if type(a.target) == "string" and a.target:match("^SCREEN_") then
-      scale(a, "offsetX", "offsetY", "edgeOffY", "edgeOffX")
-      if type(a.edge) == "table" then scale(a.edge, "offset") end
-    end
-  end
-  local uf = P.addons and P.addons.EllesmereUIUnitFrames
-  for _, pos in pairs(uf and uf.positions or {}) do scale(pos, "x", "y") end
-
-  db.profiles[NAME] = P
-  local listed = false
-  for _, n in ipairs(db.profileOrder or {}) do listed = listed or n == NAME end
-  if not listed then table.insert(db.profileOrder, 1, NAME) end
-  db._deckSource = srcName
-  db.activeProfile = NAME
-  db.lastNonSpecProfile = NAME
-  db.ppUIScale = TO_SCALE
-  sv.save(path, env, order)
-  print("EllesmereUI: profile '" .. NAME .. "' from '" .. srcName .. "', active, UI scale " .. TO_SCALE)
+-------------------------------------------------------------------------------------------- AishCore
+local D = open("AishCore").AishaddonDB
+if D._globalProfile ~= NAME then D._deckSource = D._globalProfile end
+D._deckSource = D._deckSource or "Default"
+local A = sv.copy(assert(D._profiles[D._deckSource], "AishCore: no source profile"))
+-- blocks placed on UIParent (offsets from the screen)
+for _, k in ipairs({ "castBar", "focusCastBar", "targetCastBar", "location", "menuBar", "resourceCircle",
+                     "rotationHelper", "skyriding", "addonCompartment" }) do
+	if type(A[k]) == "table" then scale(A[k], "x", "y") end
 end
+for _, b in pairs(A.extraBars and A.extraBars.bars or {}) do scale(b, "x", "y") end
+for _, b in pairs(A.unitBars and A.unitBars.bars or {}) do scale(b, "x", "y") end
+D._profiles[NAME] = A
+D._globalProfile = NAME
 
----------------------------------------------------------------------------------------------- HorizonSuite
--- The quest tracker (AishUI's profile, shared by every character): top left, under DeckForever's gamepad
--- help (Legend.lua: its top at 6, about 100 tall), narrower and shorter for the Deck's screen.
-local function HorizonDeck(p)
-  p.point, p.relPoint, p.x, p.y = "TOPLEFT", "TOPLEFT", 8, -114
-  p.panelWidth = 280
-  p.maxContentHeight, p.maxContentHeightOverworld = 420, 420
+-------------------------------------------------------------------------------------------- EllesmereUI
+local db = open("EllesmereUI").EllesmereUIDB
+if db.activeProfile ~= NAME then db._deckSource = db.activeProfile end
+local E = sv.copy(assert(db.profiles[db._deckSource], "EllesmereUI: no source profile"))
+-- unlock-mode anchors: offsets from the screen's edges or centre. EllesmereUI works with the live ones
+-- (EllesmereUIDB.unlockAnchors, the account's); the profile keeps a copy: the source's copy for both
+local function anchors(list)
+	for _, a in pairs(list) do
+		if type(a.target) == "string" and a.target:match("^SCREEN_") then
+			scale(a, "offsetX", "offsetY", "edgeOffY", "edgeOffX")
+			if type(a.edge) == "table" then scale(a.edge, "offset") end
+		end
+	end
 end
+E.unlockLayout = E.unlockLayout or {}
+E.unlockLayout.anchors = E.unlockLayout.anchors or {}
+anchors(E.unlockLayout.anchors)
+db.unlockAnchors = sv.copy(E.unlockLayout.anchors)
+-- the modules' own positions on the screen (a point and x / y, e.g. the minimap's)
+local function positions(t, depth)
+	if depth > 6 then return end
+	if type(t.point) == "string" and (t.relPoint or t.relativePoint) and type(t.x) == "number" then scale(t, "x", "y") end
+	for _, v in pairs(t) do if type(v) == "table" then positions(v, depth + 1) end end
+end
+positions(E.addons or {}, 0)
+local uf = E.addons and E.addons.EllesmereUIUnitFrames
+for _, pos in pairs(uf and uf.positions or {}) do scale(pos, "x", "y") end
+db.profiles[NAME] = E
+local listed = false
+for _, n in ipairs(db.profileOrder or {}) do listed = listed or n == NAME end
+if not listed then table.insert(db.profileOrder, 1, NAME) end
+db.activeProfile, db.lastNonSpecProfile, db.ppUIScale = NAME, NAME, TO_SCALE
 
-do
-  local path = SV .. "/HorizonSuite.lua"
-  local env, order = sv.load(path)
-  local db = env.HorizonDB
-  local srcName = db._deckSource or db.globalProfileKey
-  if srcName == NAME then srcName = "AishUI" end
-  local P = sv.copy(assert(db.profiles[srcName], "HorizonSuite: no source profile"))
-  HorizonDeck(P)
-  db.profiles[NAME] = P
-  db._deckSource = srcName
-  db.globalProfileKey = NAME
-  sv.save(path, env, order)
-  print("HorizonSuite: profile '" .. NAME .. "' from '" .. srcName .. "', active")
-end
+-------------------------------------------------------------------------------------------- HorizonSuite
+local hz = open("HorizonSuite").HorizonDB
+if hz.globalProfileKey ~= NAME then hz._deckSource = hz.globalProfileKey end
+local H = sv.copy(assert(hz.profiles[hz._deckSource], "HorizonSuite: no source profile"))
+hz.profiles[NAME] = H
+hz.globalProfileKey = NAME
+
+-------------------------------------------------------------------------------------------- the Deck
+DeckPlacements(A, E, H, db.unlockAnchors)
+for _, f in ipairs(files) do sv.save(f.path, f.env, f.order) end
+print(("'%s' built and active: AishCore from '%s', EllesmereUI from '%s' (UI scale %s), HorizonSuite from '%s'")
+	:format(NAME, D._deckSource, db._deckSource, TO_SCALE, hz._deckSource))

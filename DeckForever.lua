@@ -400,22 +400,26 @@ local function CalmDriver()
 	end
 	calmDriver:SetAttribute("calmCount", n)
 	-- fight: in combat; target: a target, out of combat; calm: neither
+	-- "awake": the bar's alpha out of combat, 0 to 1, stepped by the fade below
 	calmDriver:SetAttribute("apply", [[
 		local fight = self:GetAttribute("state-calm")
-		local awake = self:GetAttribute("state-awake") == "on"
+		local awake = tonumber(self:GetAttribute("state-awake")) or 0
 		for i = 1, self:GetAttribute("calmCount") do
 			local frame = self:GetFrameRef("calm" .. i)
 			if frame then
-				local shown
-				if self:GetAttribute("wakes" .. i) then shown = fight == "fight" or awake
-				else shown = fight ~= "calm" end
-				frame:SetAlpha(shown and 1 or self:GetAttribute("calmAlpha" .. i))
+				if self:GetAttribute("wakes" .. i) then
+					local alpha = self:GetAttribute("calmAlpha" .. i)
+					if fight == "fight" then alpha = 1 elseif awake > alpha then alpha = awake end
+					frame:SetAlpha(alpha)
+				else
+					frame:SetAlpha(fight ~= "calm" and 1 or self:GetAttribute("calmAlpha" .. i))
+				end
 			end
 		end
 	]])
 	calmDriver:SetAttribute("_onstate-calm", [[ self:RunAttribute("apply") ]])
 	calmDriver:SetAttribute("_onstate-awake", [[ self:RunAttribute("apply") ]])
-	calmDriver:SetAttribute("state-awake", "off")
+	calmDriver:SetAttribute("state-awake", "0")
 	RegisterStateDriver(calmDriver, "calm", "[combat] fight; [@target,exists] target; calm")
 end
 
@@ -423,13 +427,21 @@ end
 -- event): a trigger held (LT / RT act as modifier keys with the gamepad: GamePadEmulateShift / Ctrl / Alt,
 -- and they open the bar's pages), a spell cast or an item used, a spell waiting for its target; the end of
 -- a fight too (the bar stays AWAKE_TIME). Registered through pcall: an event a client lacks is skipped.
+-- The fade, as AishUI's unit bars do theirs: in over AWAKE_IN, out over AWAKE_OUT, eased out (quint). Out
+-- of combat only: each step is handed to the driver ("awake"), which sets the alpha. A fight shows the bar
+-- at once (no attribute can be set in combat); after it, the bar stays shown, then fades.
+local AWAKE_IN, AWAKE_OUT = 0.75, 0.45
 local awakeUntil = 0
-local function Wake()
-	awakeUntil = GetTime() + AWAKE_TIME
-	if calmDriver and not InCombatLockdown() and calmDriver:GetAttribute("state-awake") ~= "on" then
-		calmDriver:SetAttribute("state-awake", "on")
+local level, fromLevel, fadeStart, fadeGoal = 0, 0, 0, 0
+local function EaseOut(p) return p >= 1 and 1 or 1 - (1 - p) ^ 5 end
+local function SetLevel(value)
+	level = value
+	if calmDriver and not InCombatLockdown() then
+		local text = ("%.3f"):format(value)
+		if calmDriver:GetAttribute("state-awake") ~= text then calmDriver:SetAttribute("state-awake", text) end
 	end
 end
+local function Wake() awakeUntil = GetTime() + AWAKE_TIME end
 do
 	local watcher = CreateFrame("Frame")
 	for _, event in ipairs({ "MODIFIER_STATE_CHANGED", "CURRENT_SPELL_CAST_CHANGED", "PLAYER_REGEN_ENABLED" }) do
@@ -439,16 +451,19 @@ do
 	watcher:SetScript("OnEvent", function(_, event, key, down)
 		if event == "MODIFIER_STATE_CHANGED" and down ~= 1 then return end    -- (pressed, not let go)
 		Wake()
-	end)
-	local tick = 0
-	watcher:SetScript("OnUpdate", function(_, elapsed)
-		tick = tick + elapsed
-		if tick < 0.25 then return end
-		tick = 0
-		if calmDriver and not InCombatLockdown() and GetTime() > awakeUntil
-			and calmDriver:GetAttribute("state-awake") == "on" then
-			calmDriver:SetAttribute("state-awake", "off")
+		if event == "PLAYER_REGEN_ENABLED" then         -- (shown through the fight: no fade in after it)
+			fadeGoal, fromLevel, fadeStart = 1, 1, GetTime()
+			SetLevel(1)
 		end
+	end)
+	watcher:SetScript("OnUpdate", function()
+		if not calmDriver or InCombatLockdown() then return end
+		local now = GetTime()
+		local goal = now < awakeUntil and 1 or 0
+		if goal ~= fadeGoal then fadeGoal, fromLevel, fadeStart = goal, level, now end
+		if level == goal then return end
+		local p = (now - fadeStart) / (goal == 1 and AWAKE_IN or AWAKE_OUT)
+		SetLevel(fromLevel + (goal - fromLevel) * EaseOut(p))
 	end)
 end
 

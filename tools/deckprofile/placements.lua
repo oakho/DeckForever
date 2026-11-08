@@ -42,14 +42,9 @@ DeckPlacements = function(A, E, live, C)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]
 	if consumables then consumables.enabled = false end
 	A.location.enabled = false
-	-- the level badge's dark brush down into the bottom-left corner (its texture's edges are clear: at
-	-- AishUI's 87 x 54 it stopped short of the corner); its centre, where the level shows, kept
+	-- the level badge at AishUI's size (DeckForever fills the corner under it: Readability.lua)
 	local badge = A.xpBar and A.xpBar.levelBg
-	if badge then
-		local cx, cy = -20.2 + 87 / 2, -6.5 + 54 / 2
-		badge.w, badge.h = 124, 82
-		badge.x, badge.y = cx - badge.w / 2, cy - badge.h / 2
-	end
+	if badge then badge.x, badge.y, badge.w, badge.h = -20.2, -6.5, 87, 54 end
 	-- AishCore's menu bar and addons list, bottom right under the mouse: for a mouse, not the gamepad
 	if A.menuBar then A.menuBar.enabled = false end
 	if A.addonCompartment then A.addonCompartment.enabled = false end

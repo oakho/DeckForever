@@ -9,6 +9,7 @@
 --   * AishUI's level badge (its XP bar), bottom left: its dark brush has clear edges and stops short of
 --     the screen's corner. The same brush, drawn under it, fills the corner (ours: nothing of AishUI's
 --     moved; the level stays centred on AishUI's brush).
+--   * the game's gamepad wheel (GamepadRadial, not protected): 312 right of the screen's centre, put on it
 --   * Easy Controller's supplies (bag space, reagents): their counts are in NumberFontNormal, thickly
 --     outlined in black; on the orange "low" pill the count is dark brown: a blur. Plain Arial Narrow
 --     with a light shadow, readable on the dark pill and the orange one (Easy Controller sets the colour).
@@ -91,9 +92,16 @@ local function SupplyCounts()
 	end
 end
 
+local function CentreRadial()
+	local radial = _G.GamepadRadial
+	if not radial or radial:IsForbidden() or radial:IsProtected() then return end
+	radial:ClearAllPoints()
+	radial:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)

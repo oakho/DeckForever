@@ -560,6 +560,22 @@ do
   end)
 end
 
+-- rd: the frames named "...Radial..." (the game's gamepad wheel), their anchor and protection, in db.radial
+X.rd = function()
+  db.radial = {}
+  for name, v in pairs(_G) do
+    if type(name) == "string" and name:find("Radial") and type(v) == "table" and v.GetObjectType then
+      local ok, info = pcall(function()
+        local p, rel, rp, x, y = v:GetPoint(1)
+        return ("%s %s prot=%s shown=%s pt=%s %s %s %s %s"):format(name, v:GetObjectType(), tostring(v:IsProtected()),
+          tostring(v:IsShown()), tostring(p), tostring(rel and rel.GetName and rel:GetName()), tostring(rp), tostring(x), tostring(y))
+      end)
+      db.radial[#db.radial + 1] = ok and info or (name .. " ?")
+    end
+  end
+  table.sort(db.radial)
+end
+
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
@@ -575,7 +591,7 @@ end
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end, F12 = function() X.pd() end }
+  local keys = { F9 = function() X.pv() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.rd() end, F12 = function() X.pd() end, F10 = function() X.deck() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

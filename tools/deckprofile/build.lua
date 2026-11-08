@@ -87,6 +87,14 @@ db.activeProfile, db.lastNonSpecProfile, db.ppUIScale = NAME, NAME, TO_SCALE
 local ct = open("Chattynator").CHATTYNATOR_CONFIG
 local C = ct and ct.Profiles and ct.Profiles.DEFAULT
 
+-------------------------------------------------------------------------------------------- WaypointUI
+-- the in-world waypoint of the followed quest: readable at the Deck's size (AishUI had it at 0.7, its
+-- distance at 60 %); always as a waypoint (icon, beam, text under it: name and distance), never the
+-- framed pinpoint, drawn over the place it points at
+local wp = open("WaypointUI").WaypointDB_Global
+for k, v in pairs({ WaypointScale = 1, PinpointScale = 1, PinpointInfoExtended = false, WaypointSystemType = 2, WaypointDistanceTextType = 1, NavigatorScale = 1.3, WaypointDistanceTextScale = 1.3,
+    WaypointDistanceTextAlpha = 1, NavigatorAlpha = 1, fontPath = "Fonts\\FRIZQT__.TTF" }) do wp[k] = v end
+
 -------------------------------------------------------------------------------------------- the Deck
 DeckPlacements(A, E, db.unlockAnchors, C)
 for _, f in ipairs(files) do sv.save(f.path, f.env, f.order) end

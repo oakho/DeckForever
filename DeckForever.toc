@@ -13,3 +13,4 @@ DeckForever.lua
 Legend.lua
 Waypoint.lua
 Camera.lua
+Readability.lua

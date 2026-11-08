@@ -37,6 +37,8 @@ DeckPlacements = function(A, E, live, C)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]
 	if consumables then consumables.enabled = false end
 	A.location.enabled = false
+	-- the target's name bar at the top (Improved Forever's target header shows it, readable for the gamepad)
+	if A.topTargetBar then A.topTargetBar.enabled = false end
 	A.comfort = A.comfort or {}
 	A.comfort.questTurnInBox = false
 

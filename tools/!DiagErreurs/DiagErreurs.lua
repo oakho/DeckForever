@@ -485,8 +485,79 @@ end
 -- made it take every R3, the ping with it), reload
 X.r1 = function()
   local IF = ImprovedForever
-  if IF and IF.SetComboRing then IF.SetComboRing("R1", "native") end
+  if IF and IF.SetComboRing then IF.SetComboRing("R1", "consumables") end
   ReloadUI()
+end
+
+-- kl: logs the keyboard keys the game gets for 30 s (a paddle mapped to a key in Steam Input), in db.keys;
+-- the keys go on to the game as ever (propagated)
+X.kl = function()
+  if InCombatLockdown() then return end
+  db.keys = {}
+  local f = _G.DiagKeyLogger or CreateFrame("Frame", "DiagKeyLogger", UIParent)
+  f:EnableKeyboard(true)
+  f:SetPropagateKeyboardInput(true)
+  f:SetScript("OnKeyDown", function(_, key)
+    if #db.keys < 40 then db.keys[#db.keys + 1] = date("%H:%M:%S") .. " " .. tostring(key) .. " -> " .. tostring(GetBindingAction(key, true)) end
+  end)
+  f:Show()
+  C_Timer.After(30, function() if not InCombatLockdown() then f:EnableKeyboard(false) f:Hide() end end)
+  print("dgx kl: 30 s")
+end
+
+-- pd: one snapshot of the gamepad (buttons held, by name; the paddles' key state and bindings), in db.pads
+X.pd = function()
+  db.pads = db.pads or {}
+  local parts = { date("%H:%M:%S") }
+  local pad = C_GamePad
+  local id = pad and pad.GetActiveDeviceID and pad.GetActiveDeviceID()
+  local state = id and pad.GetDeviceMappedState and pad.GetDeviceMappedState(id)
+  for i, down in ipairs(state and state.buttons or {}) do
+    if down then parts[#parts + 1] = "btn:" .. tostring(pad.ButtonIndexToBinding and pad.ButtonIndexToBinding(i - 1) or i) end
+  end
+  for n = 1, 4 do
+    local key = "PADPADDLE" .. n
+    if IsKeyDown and IsKeyDown(key) then parts[#parts + 1] = "down:" .. key end
+  end
+  if #db.pads == 0 then
+    for n = 1, 4 do parts[#parts + 1] = "PADPADDLE" .. n .. "=" .. tostring(GetBindingAction("PADPADDLE" .. n, true)) end
+    parts[#parts + 1] = "wheel=" .. tostring(C_AddOns.IsAddOnLoaded("ImprovedForever_Wheel"))
+    parts[#parts + 1] = "device=" .. tostring(id) .. " buttons=" .. tostring(state and #state.buttons)
+  end
+  db.pads[#db.pads + 1] = table.concat(parts, " ")
+end
+
+-- nw: Improved Forever's wheels off (every character), reload
+X.nw = function()
+  local disable = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
+  pcall(disable, "ImprovedForever_Wheel")
+  ReloadUI()
+end
+
+-- The gamepad buttons the game gets, recorded all session in the background (db.padLog: each change of
+-- the buttons held, by name), to see what reaches it in Game Mode (the back paddles). Read only, 10 a second
+do
+  local last, tick = "", 0
+  local rec = CreateFrame("Frame")
+  rec:SetScript("OnUpdate", function(_, elapsed)
+    tick = tick + elapsed
+    if tick < 0.1 then return end
+    tick = 0
+    local pad = C_GamePad
+    local id = pad and pad.GetActiveDeviceID and pad.GetActiveDeviceID()
+    local ok, state = pcall(function() return id and pad.GetDeviceMappedState(id) end)
+    if not ok or not state then return end
+    local held = {}
+    for i, down in ipairs(state.buttons or {}) do
+      if down then held[#held + 1] = tostring(pad.ButtonIndexToBinding and pad.ButtonIndexToBinding(i - 1) or i) end
+    end
+    local now = table.concat(held, "+")
+    if now ~= last then
+      last = now
+      db.padLog = db.padLog or {}
+      if #db.padLog < 300 and now ~= "" then db.padLog[#db.padLog + 1] = date("%H:%M:%S") .. " " .. now end
+    end
+  end)
 end
 
 -- sc: prints UIParent's scale and Ellesmere's saved one
@@ -501,10 +572,10 @@ SlashCmdList.DIAGDEV = function(msg)
   else local k = {} for n in pairs(X) do k[#k + 1] = n end table.sort(k) print("dgx: " .. table.concat(k, " ")) end
 end
 
--- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
+-- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F8 = function() X.hz() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end, F12 = function() X.r1() end }
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end, F12 = function() X.pd() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()
@@ -513,7 +584,7 @@ do
       local name = "DiagDevKey" .. key
       local b = _G[name] or CreateFrame("Button", name, UIParent)
       b:SetScript("OnClick", function() local ok, err = pcall(fn) if not ok then print("dgx key:", err) end end)
-      SetOverrideBindingClick(owner, true, key, name)
+      SetOverrideBindingClick(owner, true, "CTRL-SHIFT-" .. key, name)   -- (plain F9-F12: Easy Controller's trackpad)
     end
   end)
 end

@@ -9,6 +9,9 @@
 --   * AishUI's level badge (its XP bar), bottom left: its dark brush has clear edges and stops short of
 --     the screen's corner. The same brush, drawn under it, fills the corner (ours: nothing of AishUI's
 --     moved; the level stays centred on AishUI's brush).
+--   * Easy Controller's supplies (bag space, reagents): their counts are in NumberFontNormal, thickly
+--     outlined in black; on the orange "low" pill the count is dark brown: a blur. Plain Arial Narrow
+--     with a light shadow, readable on the dark pill and the orange one (Easy Controller sets the colour).
 --------------------------------------------------------------------------------
 
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -74,7 +77,23 @@ local function LevelCorner()
 	tex:SetRotation(math.rad(175))
 end
 
+local function SupplyCounts()
+	local bar = _G.ControllerKeyboardSupplies
+	for _, button in ipairs(bar and bar.buttons or {}) do
+		local count = button.count
+		if count and not done[count] and not count:IsForbidden() then
+			if count:SetFont("Fonts\\ARIALN.TTF", 14, "") ~= false then
+				done[count] = true
+				count:SetShadowOffset(1, -1)
+				count:SetShadowColor(0, 0, 0, 0.6)
+			end
+		end
+	end
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) end)
+f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts)
+	C_Timer.After(2, function() pcall(SupplyCounts) end) end)

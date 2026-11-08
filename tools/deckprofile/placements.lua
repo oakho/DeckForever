@@ -42,6 +42,9 @@ DeckPlacements = function(A, E, live, C)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]
 	if consumables then consumables.enabled = false end
 	A.location.enabled = false
+	-- AishCore's menu bar and addons list, bottom right under the mouse: for a mouse, not the gamepad
+	if A.menuBar then A.menuBar.enabled = false end
+	if A.addonCompartment then A.addonCompartment.enabled = false end
 	-- the target's name bar at the top (Improved Forever's target header shows it, readable for the gamepad)
 	if A.topTargetBar then A.topTargetBar.enabled = false end
 	A.comfort = A.comfort or {}
@@ -64,8 +67,11 @@ DeckPlacements = function(A, E, live, C)
 	end
 	-- the clock, FPS and latency strip under the minimap (data bar "Minimap Companion"): not on the Deck
 	local dataBars = E.addons.EllesmereUIDataBars and E.addons.EllesmereUIDataBars.bars
+	-- and the other data bars, made for a mouse: the black bands along the screen's top and bottom
+	-- ("Top Bar", "Bot Bar") and the one shown under the mouse at the bottom ("Data Bot")
+	local OFF = { ["Minimap Companion"] = true, ["Top Bar"] = true, ["Bot Bar"] = true, ["Data Bot"] = true }
 	for _, bar in pairs(dataBars or {}) do
-		if bar.name == "Minimap Companion" then bar.visibility = "never" end
+		if OFF[bar.name] then bar.visibility = "never" end
 	end
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -M, offsetY = 0,

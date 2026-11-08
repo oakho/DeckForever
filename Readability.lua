@@ -6,6 +6,9 @@
 --     scales and moves them afterwards (it never sets their font again). Its headers (target, zone, level)
 --     hang on one origin, 130 under the screen's top: moved up to HEADER_Y, out of the way of the view
 --     (the top's free: AishUI's target bar is off). Its first-time tour moves it and puts it back at 130.
+--   * AishUI's XP bar: its hover zone on the level badge (50 x 50 times its scale), bottom left, shows the totals and the
+--     mouse's key hints (ALT, SHIFT) under the minimap: made for a mouse. Its mouse is turned off (an
+--     unnamed frame of AishCore's: found by its size, place and strata).
 --------------------------------------------------------------------------------
 
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -53,7 +56,24 @@ local function MoveHeader()
 	origin:SetPoint("CENTER", UIParent, "TOP", 0, -HEADER_Y)
 end
 
+local function IsXPHover(frame)
+	if frame:GetName() or frame:IsForbidden() or not frame:IsMouseEnabled() or not frame:GetScript("OnEnter") then return false end
+	if frame:GetFrameStrata() ~= "HIGH" then return false end
+	local w, h = frame:GetSize()
+	local point, relative = frame:GetPoint(1)
+	-- (50 x 50 times the badge's scale: a square, bottom left; some frames' sizes are secret values: the
+	-- comparison errors, caught by the caller)
+	return w > 10 and w < 200 and math.abs(w - h) < 0.5 and point == "BOTTOMLEFT" and relative == UIParent
+end
+local function NoXPHover()
+	for _, frame in ipairs({ UIParent:GetChildren() }) do
+		local ok, hit = pcall(IsXPHover, frame)
+		if ok and hit then frame:EnableMouse(false) end
+	end
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) end)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(NoXPHover)
+	C_Timer.After(3, function() pcall(NoXPHover) end) end)

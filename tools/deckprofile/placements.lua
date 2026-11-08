@@ -21,6 +21,11 @@ DeckPlacements = function(A, E, live, C)
 	A.castBar.x, A.castBar.y = CX, 175
 	local bars = A.unitBars.bars
 	bars.player.x, bars.target.x, bars.focus.x = CX - 179, CX + 179, CX + 450
+	-- the names in Friz Quadrata (the game's serif, as Improved Forever's target header: more immersive than
+	-- AishUI's Bebas); the numbers stay in AishUI's sans serif. (Friz is wider: a size under Bebas's 16)
+	for _, bar in pairs(bars) do
+		bar.nameFont, bar.nameSize = "Fonts\\FRIZQT__.TTF", 14
+	end
 	-- the pet under the player, the target's target under the target ("parent": the reference + relX/Y)
 	bars.pet.layout, bars.pet.mirrorOf, bars.pet.relX, bars.pet.relY, bars.pet.width = "parent", "player", 0, -30, 140
 	local tot = bars.targettarget

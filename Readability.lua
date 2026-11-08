@@ -3,12 +3,15 @@
 --   * Improved Forever's target header (ImprovedForever_Immersion, TargetHeader.lua): its name is in
 --     Morpheus at 30, drawn at 60 % (SetTextScale) with no outline, its lines in the game's small font:
 --     blurry and small at 1280 x 800. Set once to a plain font with an outline, bigger; its own code only
---     scales and moves them afterwards (it never sets their font again).
+--     scales and moves them afterwards (it never sets their font again). Its headers (target, zone, level)
+--     hang on one origin, 130 under the screen's top: moved up to HEADER_Y, out of the way of the view
+--     (the top's free: AishUI's target bar is off). Its first-time tour moves it and puts it back at 130.
 --------------------------------------------------------------------------------
 
 local FONT = "Fonts\\FRIZQT__.TTF"
 local NAME_SIZE = 40                   -- (shown at 60 % by Improved Forever: about 24)
 local LINE_SIZE = 14
+local HEADER_Y = 72                    -- (the gold rule's height from the screen's top; Improved Forever: 130)
 
 local done = setmetatable({}, { __mode = "k" })
 local function Sharpen(fs, size)
@@ -41,7 +44,16 @@ local function TargetHeader()
 	return true
 end
 
+local function MoveHeader()
+	local header = _G.ImprovedForeverTargetHeader
+	if not header then return end
+	local _, origin = header:GetPoint(1)
+	if not origin or origin == UIParent or origin:IsForbidden() then return end
+	origin:ClearAllPoints()
+	origin:SetPoint("CENTER", UIParent, "TOP", 0, -HEADER_Y)
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) end)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) end)

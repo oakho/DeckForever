@@ -534,48 +534,6 @@ X.nw = function()
   ReloadUI()
 end
 
--- The gamepad buttons the game gets, recorded all session in the background (db.padLog: each change of
--- the buttons held, by name), to see what reaches it in Game Mode (the back paddles). Read only, 10 a second
-do
-  local last, tick = "", 0
-  local rec = CreateFrame("Frame")
-  rec:SetScript("OnUpdate", function(_, elapsed)
-    tick = tick + elapsed
-    if tick < 0.1 then return end
-    tick = 0
-    local pad = C_GamePad
-    local id = pad and pad.GetActiveDeviceID and pad.GetActiveDeviceID()
-    local ok, state = pcall(function() return id and pad.GetDeviceMappedState(id) end)
-    if not ok or not state then return end
-    local held = {}
-    for i, down in ipairs(state.buttons or {}) do
-      if down then held[#held + 1] = tostring(pad.ButtonIndexToBinding and pad.ButtonIndexToBinding(i - 1) or i) end
-    end
-    local now = table.concat(held, "+")
-    if now ~= last then
-      last = now
-      db.padLog = db.padLog or {}
-      if #db.padLog < 300 and now ~= "" then db.padLog[#db.padLog + 1] = date("%H:%M:%S") .. " " .. now end
-    end
-  end)
-end
-
--- rd: the frames named "...Radial..." (the game's gamepad wheel), their anchor and protection, in db.radial
-X.rd = function()
-  db.radial = {}
-  for name, v in pairs(_G) do
-    if type(name) == "string" and name:find("Radial") and type(v) == "table" and v.GetObjectType then
-      local ok, info = pcall(function()
-        local p, rel, rp, x, y = v:GetPoint(1)
-        return ("%s %s prot=%s shown=%s pt=%s %s %s %s %s"):format(name, v:GetObjectType(), tostring(v:IsProtected()),
-          tostring(v:IsShown()), tostring(p), tostring(rel and rel.GetName and rel:GetName()), tostring(rp), tostring(x), tostring(y))
-      end)
-      db.radial[#db.radial + 1] = ok and info or (name .. " ?")
-    end
-  end
-  table.sort(db.radial)
-end
-
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())

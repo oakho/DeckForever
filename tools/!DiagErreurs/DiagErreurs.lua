@@ -322,6 +322,165 @@ X.hz = function()
   ReloadUI()
 end
 
+-- wp: WaypointUI readable on the Deck (bigger, fully opaque text), TomTom off for this character, reload
+X.wp = function()
+  -- (TomTom stays: WaypointUI shows its waypoint; Waypoint.lua hides its arrow)
+  if WaypointDB_Global then
+    for k, v in pairs({ WaypointScale = 1, PinpointScale = 1, PinpointInfoExtended = false, WaypointSystemType = 2, WaypointDistanceTextType = 1, NavigatorScale = 1.3, WaypointDistanceTextScale = 1.3,
+    WaypointDistanceTextAlpha = 1, NavigatorAlpha = 1, fontPath = "Fonts\\FRIZQT__.TTF" }) do WaypointDB_Global[k] = v end
+  end
+  ReloadUI()
+end
+
+-- gp: how this client's gamepad bar is built and bound, kept in db.gamepad (read at the reload)
+X.gp = function()
+  local out = {}
+  for _, cv in ipairs({ "GamePadEnable", "GamePadEmulateShift", "GamePadEmulateCtrl", "GamePadEmulateAlt" }) do
+    out[#out + 1] = cv .. "=" .. tostring(GetCVar(cv))
+  end
+  for _, key in ipairs({ "PADDUP", "PADDDOWN", "PADDLEFT", "PADDRIGHT", "PAD1", "PAD2", "PADLTRIGGER", "PADRTRIGGER",
+                         "SHIFT-PADDUP", "ALT-PADDUP", "CTRL-PADDUP", "SHIFT-PAD1" }) do
+    out[#out + 1] = key .. " -> " .. tostring(GetBindingAction(key, true))
+  end
+  local d = _G.DeckForeverCalmDriver
+  out[#out + 1] = "state-pad=" .. tostring(d and d:GetAttribute("state-pad"))
+  local function scan(f, depth, path)
+    if depth > 5 or not f or f:IsForbidden() then return end
+    local n = f:GetName() or "?"
+    local info = path .. ">" .. n .. " [" .. f:GetObjectType() .. "]"
+    for _, k in ipairs({ "commandName", "bindingAction", "action", "buttonType", "keyBinding", "binding" }) do
+      local ok, v = pcall(function() return f[k] end)
+      if ok and v ~= nil and type(v) ~= "table" and type(v) ~= "function" then info = info .. " " .. k .. "=" .. tostring(v) end
+    end
+    if f.GetAttribute then
+      for _, a in ipairs({ "action", "type", "binding" }) do
+        local ok, v = pcall(f.GetAttribute, f, a)
+        if ok and v ~= nil then info = info .. " @" .. a .. "=" .. tostring(v) end
+      end
+    end
+    if f.GetButtonState then info = info .. " state=" .. tostring(f:GetButtonState()) end
+    out[#out + 1] = info
+    for _, c in ipairs({ f:GetChildren() }) do scan(c, depth + 1, path .. ">" .. n) end
+  end
+  scan(_G.GamepadMainActionBarFrame, 0, "")
+  db.gamepad = out
+  print("dgx gp: " .. #out)
+end
+
+-- sn: one snapshot of the gamepad bar (modifiers, the shown sub-bars of its page unit, pushed buttons),
+-- appended to db.snaps (F5, pressed repeatedly while the player holds a gamepad button)
+X.sn = function()
+  db.snaps = db.snaps or {}
+  local parts = { date("%H:%M:%S"),
+    "shift=" .. tostring(IsShiftKeyDown()), "ctrl=" .. tostring(IsControlKeyDown()), "alt=" .. tostring(IsAltKeyDown()) }
+  local d = _G.DeckForeverCalmDriver
+  parts[#parts + 1] = "pad=" .. tostring(d and d:GetAttribute("state-pad"))
+  local pu = _G.GamepadMainActionBarFramePageUnit
+  if pu then
+    for _, a in ipairs({ "state-page", "actionpage", "page", "state-layer" }) do
+      local ok, v = pcall(pu.GetAttribute, pu, a)
+      if ok and v ~= nil then parts[#parts + 1] = a .. "=" .. tostring(v) end
+    end
+  end
+  local function scan(f, depth)
+    if depth > 6 or not f or f:IsForbidden() then return end
+    local n = f:GetName()
+    if n and f:IsShown() and n:find("Bar$") then parts[#parts + 1] = "shown:" .. n:gsub("GamepadMainActionBarFramePageUnit", "") end
+    if f.GetButtonState and f:GetButtonState() == "PUSHED" then parts[#parts + 1] = "PUSHED:" .. tostring(n) end
+    for _, c in ipairs({ f:GetChildren() }) do scan(c, depth + 1) end
+  end
+  scan(_G.GamepadMainActionBarFrame, 0)
+  db.snaps[#db.snaps + 1] = table.concat(parts, " ")
+end
+
+-- tt: TomTom on again (every character), reload
+X.tt = function()
+  local enable = (C_AddOns and C_AddOns.EnableAddOn) or EnableAddOn
+  pcall(enable, "TomTom")
+  ReloadUI()
+end
+
+-- wu: WaypointUI's waypoint frame tree (names, sizes, texts), kept in db.wui
+X.wu = function()
+  local out = {}
+  local root = _G.WUIWaypointFrame
+  out[#out + 1] = "root=" .. tostring(root) .. " named footer=" .. tostring(_G["WUIWaypointFrame.Footer"])
+  local function scan(f, depth, path)
+    if depth > 4 or not f then return end
+    local okW, w = pcall(f.GetWidth, f)
+    out[#out + 1] = path .. " " .. tostring(f.GetName and f:GetName()) .. " " .. f:GetObjectType() .. " w=" .. tostring(okW and w)
+    if f.GetRegions then
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:GetObjectType() == "FontString" then
+          local ok, t = pcall(r.GetText, r)
+          out[#out + 1] = path .. "  FS w=" .. tostring(r:GetWidth()) .. " text=" .. tostring(ok and t)
+        end
+      end
+    end
+    if f.GetChildren then for i, c in ipairs({ f:GetChildren() }) do scan(c, depth + 1, path .. "." .. i) end end
+  end
+  if root then scan(root, 0, "R") end
+  db.wui = out
+end
+
+-- ca: the gamepad page unit's methods and scripts (what lays the class action out), kept in db.ca
+X.ca = function()
+  local out = {}
+  local unit = GamepadMainActionBarFrame and GamepadMainActionBarFrame.PageUnit
+  local function methods(obj, label)
+    local seen = {}
+    local t = obj
+    for depth = 1, 3 do
+      if type(t) ~= "table" then break end
+      for k, v in pairs(t) do
+        if type(v) == "function" and not seen[k] then seen[k] = true out[#out + 1] = label .. depth .. ":" .. tostring(k) end
+      end
+      local mt = getmetatable(t)
+      t = mt and type(mt.__index) == "table" and mt.__index or nil
+    end
+  end
+  if unit then
+    methods(unit, "unit")
+    for _, s in ipairs({ "OnEvent", "OnUpdate", "OnShow", "OnSizeChanged" }) do
+      out[#out + 1] = "script " .. s .. "=" .. tostring(unit:GetScript(s) ~= nil)
+    end
+    local b = unit.LeftClassAction
+    if b then
+      methods(b, "btn")
+      local p = { b:GetPoint(1) }
+      out[#out + 1] = "btn point " .. tostring(p[1]) .. " " .. tostring(p[2] and p[2].GetName and p[2]:GetName()) .. " " .. tostring(p[3]) .. " " .. tostring(p[4]) .. " " .. tostring(p[5])
+      out[#out + 1] = "btn OnUpdate=" .. tostring(b:GetScript("OnUpdate") ~= nil)
+    end
+  end
+  for _, side in ipairs({ "LeftClassAction", "RightClassAction" }) do
+    local b = unit and unit[side]
+    if b then
+      local icon = b.icon or b.Icon
+      local ok, act = pcall(b.GetAttribute, b, "action")
+      out[#out + 1] = side .. " shown=" .. tostring(b:IsShown()) .. " visible=" .. tostring(b:IsVisible()) .. " alpha=" .. tostring(b:GetAlpha())
+        .. " action=" .. tostring(ok and act) .. " field=" .. tostring(b.action) .. " has=" .. tostring(b.action and HasAction(b.action))
+        .. " icon=" .. tostring(icon and icon:IsShown() and icon:GetTexture())
+    end
+  end
+  table.sort(out)
+  db.ca = out
+end
+
+-- mv: logs who moves the class action (diagnostics only: a post-hook on its SetPoint), kept in db.mv
+local mvHooked
+X.mv = function()
+  local b = GamepadMainActionBarFrame and GamepadMainActionBarFrame.PageUnit and GamepadMainActionBarFrame.PageUnit.LeftClassAction
+  if not b or mvHooked then return end
+  mvHooked = true
+  db.mv = {}
+  hooksecurefunc(b, "SetPoint", function(_, point, rel, relPoint, x, y)
+    if #db.mv >= 20 then return end
+    local stack = debugstack(3, 4, 0) or ""
+    db.mv[#db.mv + 1] = date("%H:%M:%S") .. " " .. tostring(x) .. "," .. tostring(y) .. " | " .. stack:gsub("\n", " || ")
+  end)
+  print("dgx mv: hooked")
+end
+
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
@@ -337,7 +496,7 @@ end
 -- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end, F8 = function() X.hz() end }
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end, F8 = function() X.hz() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

@@ -481,6 +481,14 @@ X.mv = function()
   print("dgx mv: hooked")
 end
 
+-- r1: Improved Forever's RB + R3 wheel back to the game's own R3 (RB isn't a modifier key: that wheel
+-- made it take every R3, the ping with it), reload
+X.r1 = function()
+  local IF = ImprovedForever
+  if IF and IF.SetComboRing then IF.SetComboRing("R1", "native") end
+  ReloadUI()
+end
+
 -- sc: prints UIParent's scale and Ellesmere's saved one
 X.sc = function()
   print("UIParent", UIParent:GetScale(), "EUI", EllesmereUIDB and EllesmereUIDB.ppUIScale, "phys", GetPhysicalScreenSize())
@@ -496,7 +504,7 @@ end
 -- Dev keys (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F12 = function() X.cd() end, F8 = function() X.hz() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end }
+  local keys = { F9 = function() X.pv() end, F10 = function() X.deck() end, F11 = function() ReloadUI() end, F8 = function() X.hz() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.mv() end, F12 = function() X.r1() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

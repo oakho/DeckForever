@@ -118,6 +118,7 @@ end
 -- its prompt under it at 75 % (the 58 px between the bar and the XP bar hold both then)
 local CLASS_ACTION_Y, CLASS_PROMPT_Y, CLASS_PROMPT_SCALE = -64, -92, 0.75
 local BLIZZARD_ACTION_Y, BLIZZARD_PROMPT_Y = -50, -80
+local classPlaced = setmetatable({}, { __mode = "k" })   -- button -> where we put it (kept here, not on it)
 local function PlaceClassAction()
 	local unit = GamepadMainActionBarFrame and GamepadMainActionBarFrame.PageUnit
 	if not unit or InCombatLockdown() then return end
@@ -130,6 +131,7 @@ local function PlaceClassAction()
 		if not alone then y, py, scale = BLIZZARD_ACTION_Y, BLIZZARD_PROMPT_Y, 1 end
 		button:ClearAllPoints()
 		button:SetPoint("CENTER", anchor, "CENTER", x, y)
+		classPlaced[button] = { x, y }
 		if prompt and not prompt:IsForbidden() then
 			prompt:SetScale(scale)
 			prompt:ClearAllPoints()
@@ -147,6 +149,24 @@ local function HookClassAction()
 	for _, button in ipairs({ unit.LeftClassAction, unit.RightClassAction }) do
 		button:HookScript("OnShow", PlaceClassAction)
 		button:HookScript("OnHide", PlaceClassAction)
+	end
+	-- pressing it, Blizzard's pressed look (ApplyPressedStyle > ApplyExtraButtonStyles) anchors it again at its
+	-- own place, written in its code (-138, -50; 2 lower while held). Put back right after, in the same frame
+	-- (never seen moving), the press's offset kept. A post-hook on this one method (nothing replaced; the
+	-- hooked method calls no other hooked one). Out of combat only: pressed in combat, it shows at Blizzard's
+	-- place until the fight ends (PLAYER_REGEN_ENABLED places it back)
+	for _, button in ipairs({ unit.LeftClassAction, unit.RightClassAction }) do
+		if button.ApplyPressedStyle then
+			hooksecurefunc(button, "ApplyPressedStyle", function(self)
+				if InCombatLockdown() or self:IsForbidden() then return end
+				local _, relative, _, _, y = self:GetPoint(1)
+				local at = classPlaced[self]
+				if not (at and relative == unit.BottomCenteredAnchor and y) then return end
+				local press = y - BLIZZARD_ACTION_Y               -- (-2 while held, 0 after)
+				self:ClearAllPoints()
+				self:SetPoint("CENTER", unit.BottomCenteredAnchor, "CENTER", at[1], at[2] + press)
+			end)
+		end
 	end
 end
 
@@ -381,7 +401,7 @@ local FADED = {
 -- environment, never from DeckForever's code). Set up once, out of combat; at once, no fade.
 --   * the player frame: faded out of combat with no target (CALM_ALPHA)
 --   * the gamepad bar (immersion): hidden out of combat; shown in combat, and out of combat for
---     AWAKE_TIME after it is used (a trigger held, a cast: "awake", set below from those: our own
+--     AWAKE_TIME after LT, RT or the d-pad is pressed ("awake", set below: our own
 --     handler's attribute, which addon code may set out of combat). Hidden, it still works: the first
 --     press both acts and shows it. After a fight it stays AWAKE_TIME before hiding.
 local AWAKE_TIME = 5
@@ -425,13 +445,45 @@ local function CalmDriver()
 	RegisterStateDriver(calmDriver, "calm", "[combat] fight; [@target,exists] target; calm")
 end
 
--- What wakes the bar, read from the game's events (nothing hooked; this client has no gamepad button
--- event): a trigger held (LT / RT act as modifier keys with the gamepad: GamePadEmulateShift / Ctrl / Alt,
--- and they open the bar's pages), a spell cast or an item used, a spell waiting for its target; the end of
--- a fight too (the bar stays AWAKE_TIME). Registered through pcall: an event a client lacks is skipped.
--- The fade, as AishUI's unit bars do theirs: in over AWAKE_IN, out over AWAKE_OUT, eased out (quint). Out
--- of combat only: each step is handed to the driver ("awake"), which sets the alpha. A fight shows the bar
--- at once (no attribute can be set in combat); after it, the bar stays shown, then fades.
+-- What wakes the bar. This client's gamepad bar takes the gamepad's buttons itself (no key bindings: the
+-- d-pad and A / B / X / Y are bound to nothing), so the bar's own state is read, measured on it:
+--   * LT / RT held: it shows its left / right page (…LeftCenteredAnchorLeftBar, …RightCenteredAnchorRightBar)
+--   * the d-pad: its main page's buttons 1 to 4 show pushed (5 to 8 are A / B / X / Y: they don't wake it,
+--     nor does LB, the allies' targeting page)
+--   * the end of a fight (the bar stays AWAKE_TIME)
+-- None of it while a window, a menu or a text box has the focus (ElsewhereFocus).
+-- Read 10 times a second, out of combat: only getters, nothing hooked, nothing set on Blizzard's frames.
+local PAGE = "GamepadMainActionBarFramePageUnit"
+local WAKE_PAGES = { PAGE .. "LeftCenteredAnchorLeftBar", PAGE .. "RightCenteredAnchorRightBar" }
+local DPAD_BUTTON = PAGE .. "TopCenteredAnchorTopBarActionButton"
+-- Not while the game's own focus is elsewhere: a window or menu open (the gamepad then drives a cursor:
+-- freelook off), the chat's line or any text box taking the keys, the game menu
+local PANELS = { "left", "center", "right", "doublewide", "fullscreen" }
+local function ElsewhereFocus()
+	if IsGamePadFreelookEnabled and not IsGamePadFreelookEnabled() then return true end
+	if GetCurrentKeyBoardFocus and GetCurrentKeyBoardFocus() then return true end
+	if GameMenuFrame and GameMenuFrame:IsShown() then return true end
+	if GetUIPanel then
+		for _, slot in ipairs(PANELS) do if GetUIPanel(slot) then return true end end
+	end
+	return false
+end
+local padTick = 0
+local function Pressed(elapsed)
+	padTick = padTick + elapsed
+	if padTick < 0.1 then return false end
+	padTick = 0
+	if ElsewhereFocus() then return false end
+	for _, name in ipairs(WAKE_PAGES) do
+		local bar = _G[name]
+		if bar and bar:IsShown() then return true end
+	end
+	for i = 1, 4 do
+		local button = _G[DPAD_BUTTON .. i]
+		if button and button:GetButtonState() == "PUSHED" then return true end
+	end
+	return false
+end
 local AWAKE_IN, AWAKE_OUT = 0.75, 0.45
 local awakeUntil = 0
 local level, fromLevel, fadeStart, fadeGoal = 0, 0, 0, 0
@@ -446,20 +498,15 @@ end
 local function Wake() awakeUntil = GetTime() + AWAKE_TIME end
 do
 	local watcher = CreateFrame("Frame")
-	for _, event in ipairs({ "MODIFIER_STATE_CHANGED", "CURRENT_SPELL_CAST_CHANGED", "PLAYER_REGEN_ENABLED" }) do
-		pcall(watcher.RegisterEvent, watcher, event)
-	end
-	pcall(watcher.RegisterUnitEvent, watcher, "UNIT_SPELLCAST_SENT", "player")
-	watcher:SetScript("OnEvent", function(_, event, key, down)
-		if event == "MODIFIER_STATE_CHANGED" and down ~= 1 then return end    -- (pressed, not let go)
+	watcher:RegisterEvent("PLAYER_REGEN_ENABLED")
+	watcher:SetScript("OnEvent", function()          -- (shown through the fight: no fade in after it)
 		Wake()
-		if event == "PLAYER_REGEN_ENABLED" then         -- (shown through the fight: no fade in after it)
-			fadeGoal, fromLevel, fadeStart = 1, 1, GetTime()
-			SetLevel(1)
-		end
+		fadeGoal, fromLevel, fadeStart = 1, 1, GetTime()
+		SetLevel(1)
 	end)
-	watcher:SetScript("OnUpdate", function()
+	watcher:SetScript("OnUpdate", function(_, elapsed)
 		if not calmDriver or InCombatLockdown() then return end
+		if Pressed(elapsed) then Wake() end
 		local now = GetTime()
 		local goal = now < awakeUntil and 1 or 0
 		if goal ~= fadeGoal then fadeGoal, fromLevel, fadeStart = goal, level, now end

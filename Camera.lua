@@ -1,9 +1,10 @@
 --------------------------------------------------------------------------------
 -- A DynamicCam profile for the Deck (/df camera): AishUI's "Immersion" (its character off centre, the
 -- camera closer in a fight, further mounted...), copied as a profile of its own ("DeckForever") and
--- made the one in use, the character raised on the screen: the Deck's screen is small, and the bars of
--- a fight (AishCore's, over the gamepad bar) stand up to about 37 % of its height. "Immersion" itself
--- is left as it is; run again to copy it anew (after an AishUI update). Nothing without DynamicCam.
+-- made the one in use, the character raised on the screen in a fight: the Deck's screen is small, and
+-- a fight's bars (AishCore's, over the gamepad bar) stand up to about 37 % of its height. Out of one,
+-- Immersion's own view. "Immersion" itself is left as it is; run again to copy it anew (after an
+-- AishUI update). Nothing without DynamicCam.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -11,10 +12,13 @@ local _, ns = ...
 local PROFILE = "DeckForever"
 local SOURCE = "Immersion"
 
--- the character raised: DynamicCam's dynamic pitch pad (higher: the character higher on the screen)
--- up by PITCH_RAISE in its standard settings and in every situation that sets its own, at most PITCH_MAX
+-- the character raised in a fight: DynamicCam's dynamic pitch pad (higher: the character higher on the
+-- screen) up by PITCH_RAISE in each fight situation (DynamicCam's ids: world, dungeon boss / trash, raid
+-- boss / trash, arena, battleground), from its own pad or else the standard one, at most PITCH_MAX.
+-- (Out of a fight, +0.54 put its feet at 41 % up, from 21 %)
 local PITCH = "test_cameraDynamicPitchBaseFovPad"
-local PITCH_RAISE, PITCH_MAX = 0.54, 1          -- (0.36 left its feet at 35 % up, under the top of a fight's bars)
+local PITCH_RAISE, PITCH_MAX = 0.54, 1
+local FIGHTS = { "006", "023", "024", "033", "034", "051", "061" }
 
 -- The game's "keep the character centred" (motion sickness) option cancels the shoulder offset. With
 -- a controller, Blizzard's gamepad code holds it on in a temporary layer over the saved setting (so
@@ -48,15 +52,16 @@ function ns.CameraProfile(print)
 	DC.db:SetProfile(PROFILE)
 	DC.db:CopyProfile(SOURCE, true)
 	local profile = DC.db.profile
-	local function Raise(cvars)
-		local v = cvars and tonumber(cvars[PITCH])
-		if v then cvars[PITCH] = math.min(PITCH_MAX, v + PITCH_RAISE) end
-	end
-	Raise(profile.standardSettings and profile.standardSettings.cvars)
-	for _, situation in pairs(profile.situations or {}) do
-		Raise(situation.situationSettings and situation.situationSettings.cvars)
+	local standard = tonumber(profile.standardSettings and profile.standardSettings.cvars[PITCH]) or 0.3
+	for _, id in ipairs(FIGHTS) do
+		local situation = profile.situations and profile.situations[id]
+		local settings = situation and situation.situationSettings
+		if settings then
+			settings.cvars = settings.cvars or {}
+			settings.cvars[PITCH] = math.min(PITCH_MAX, (tonumber(settings.cvars[PITCH]) or standard) + PITCH_RAISE)
+		end
 	end
 	DC:RefreshConfig()
 	Uncentre()
-	print(("profil caméra « %s » de DynamicCam actif : « %s » d'AishUI, le personnage plus haut."):format(PROFILE, SOURCE))
+	print(("profil caméra « %s » de DynamicCam actif : « %s » d'AishUI, le personnage plus haut en combat."):format(PROFILE, SOURCE))
 end

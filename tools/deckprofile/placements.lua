@@ -41,15 +41,15 @@ DeckPlacements = function(A, E, live, C)
 	bars.pet.layout, bars.pet.mirrorOf, bars.pet.relX, bars.pet.relY, bars.pet.width = "parent", "player", 0, -30, 140
 	local tot = bars.targettarget
 	tot.layout, tot.mirrorOf, tot.relX, tot.relY, tot.width = "parent", "target", 0, -30, 140
-	-- The out-of-combat circles floating by the character (DeckForever's DynamicCam profile, AishUI's
-	-- "Immersion" with the character raised, Camera.lua: it stands 42 % across, about 22 wide either side,
-	-- its knees at 45 % up, measured; on the Deck's screen, 1333 x 800). As AishUI shows
+	-- The out-of-combat circles floating by the character (DeckForever's DynamicCam profile, Camera.lua:
+	-- out of a fight AishUI's "Immersion" view, the character off centre: it stands 42 % across, about 22
+	-- wide either side, its knees at 25 % up, measured; on the Deck's screen, 1333 x 800). As AishUI shows
 	-- them: the resource circle (32) a badge on the health circle's (54) rim, down-right of it (55 degrees
 	-- below, the rims touching); the pair by the character's left side at its knees, M off it; well fed
 	-- (60) by its right side. Fractions of the screen from the bottom left. (AishCore's own followPlayer
 	-- setting is read by nothing.)
 	local h, r, w = A.healthCircle, A.outOfCombatResourceCircle, A.wellFedCircle
-	local SW, SH, CX_PCT, BODY, KNEES = 1333, 800, 0.42, 22, 0.45
+	local SW, SH, CX_PCT, BODY, KNEES = 1333, 800, 0.42, 22, 0.25
 	local a = math.rad(55)
 	local bx, by = (27 + 16) * math.cos(a), -(27 + 16) * math.sin(a)   -- (the badge from the health's centre)
 	local hx, hy = CX_PCT * SW - BODY - M - 16 - bx, KNEES * SH

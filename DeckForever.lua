@@ -64,10 +64,11 @@ local LAYOUT = {
 	-- level with their bottom (4 a row), the utility ones right under them; the tracked buff icons
 	-- hidden (VisibleSetting 2 = Enum.CooldownViewerVisibleSetting.Hidden: they showed all the time,
 	-- by the character)
+	-- (hidden since AishUI: its centre circle stands there, and its priority bar shows the main spells' cooldowns)
 	{ system = "CooldownViewer", index = 1, point = "BOTTOM", relativePoint = "BOTTOM", x = 0, y = 248,
-		settings = { IconLimit = 4 } },
+		settings = { IconLimit = 4, VisibleSetting = 2 } },
 	{ system = "CooldownViewer", index = 2, point = "TOP", relativePoint = "BOTTOM", x = 0, y = 244,
-		settings = { IconLimit = 6 } },
+		settings = { IconLimit = 6, VisibleSetting = 2 } },
 	{ system = "CooldownViewer", index = 3, point = "BOTTOMLEFT", relativePoint = "BOTTOM", x = -340, y = 352,
 		settings = { VisibleSetting = 2 } },
 	-- (test) bottom-left: the chat, from the left edge to the XP bar M away, as tall as the minimap and
@@ -422,13 +423,13 @@ local FADED = {
 -- state driver, the game's own way to change protected frames (the alpha is set in its restricted
 -- environment, never from DeckForever's code). Set up once, out of combat; at once, no fade.
 --   * the player frame: faded out of combat with no target (CALM_ALPHA)
---   * the gamepad bar (immersion): hidden out of combat; shown in combat, and out of combat for
---     AWAKE_TIME after LT, RT or the d-pad is pressed ("awake", set below: our own
---     handler's attribute, which addon code may set out of combat). Hidden, it still works: the first
---     press both acts and shows it. After a fight it fades out at once: AishCore's out-of-combat
---     circles come in by the character then, over the bar's top. Under a subtitle of Spoken's it's woken
---     to CALM_ALPHA only.
-local AWAKE_TIME = 5
+--   * the gamepad bar: full in combat; out of combat hidden, up to BAR_AWAKE while LT, RT or the d-pad
+--     is pressed ("awake", set below: our own handler's attribute, which addon code may set out of
+--     combat), then AWAKE_TIME after the last press (or the fight's end) faded out, gently. Hidden, it
+--     still works: the first press both acts and shows it. Under a subtitle of Spoken's (which stands
+--     over it then) CALM_ALPHA at most.
+local AWAKE_TIME = 0.5               -- (seconds after the last press, or the fight's end, before it fades)
+local BAR_AWAKE = 0.5
 local CALM_FRAMES = { { "PlayerFrame", CALM_ALPHA }, { "GamepadMainActionBarFrame", 0, true } }
 local calmDriver
 local function CalmDriver()
@@ -446,7 +447,7 @@ local function CalmDriver()
 	end
 	calmDriver:SetAttribute("calmCount", n)
 	-- fight: in combat; target: a target, out of combat; calm: neither
-	-- "awake": the bar's alpha out of combat, 0 to 1, stepped by the fade below
+	-- "awake": the bar's alpha out of combat, stepped by the fade below
 	calmDriver:SetAttribute("apply", [[
 		local fight = self:GetAttribute("state-calm")
 		local awake = tonumber(self:GetAttribute("state-awake")) or 0
@@ -454,9 +455,7 @@ local function CalmDriver()
 			local frame = self:GetFrameRef("calm" .. i)
 			if frame then
 				if self:GetAttribute("wakes" .. i) then
-					local alpha = self:GetAttribute("calmAlpha" .. i)
-					if fight == "fight" then alpha = 1 elseif awake > alpha then alpha = awake end
-					frame:SetAlpha(alpha)
+					frame:SetAlpha(fight == "fight" and 1 or awake)
 				else
 					frame:SetAlpha(fight ~= "calm" and 1 or self:GetAttribute("calmAlpha" .. i))
 				end
@@ -507,10 +506,11 @@ local function Pressed(elapsed)
 	end
 	return false
 end
-local AWAKE_IN, AWAKE_OUT = 0.75, 0.45
+local AWAKE_IN, AWAKE_OUT = 0.2, 0.6     -- (up quick, as it's pressed; down gently)
 local awakeUntil = 0
 local level, fromLevel, fadeStart, fadeGoal = 0, 0, 0, 0
-local function EaseOut(p) return p >= 1 and 1 or 1 - (1 - p) ^ 5 end
+local function EaseOut(p) return p >= 1 and 1 or 1 - (1 - p) ^ 3 end
+local function Smooth(p) return p >= 1 and 1 or 0.5 - 0.5 * math.cos(math.pi * p) end
 local function SetLevel(value)
 	level = value
 	if calmDriver and not InCombatLockdown() then
@@ -522,22 +522,24 @@ local function Wake() awakeUntil = GetTime() + AWAKE_TIME end
 do
 	local watcher = CreateFrame("Frame")
 	watcher:RegisterEvent("PLAYER_REGEN_ENABLED")
-	watcher:SetScript("OnEvent", function()          -- (shown through the fight: faded out from there)
-		awakeUntil = 0
-		fadeGoal, fromLevel, fadeStart = 0, 1, GetTime()
+	watcher:SetScript("OnEvent", function()          -- (full through the fight: faded from AWAKE_TIME on)
+		Wake()
+		fadeGoal, fromLevel, fadeStart = 1, 1, GetTime()
 		SetLevel(1)
 	end)
 	watcher:SetScript("OnUpdate", function(_, elapsed)
 		if not calmDriver or InCombatLockdown() then return end
 		if Pressed(elapsed) then Wake() end
 		local now = GetTime()
-		local goal = now < awakeUntil and 1 or 0
+		-- (the fight's end: fading from full; a press out of one: up to BAR_AWAKE)
+		local goal = now < awakeUntil and (fadeGoal == 1 and 1 or BAR_AWAKE) or 0
 		-- (quieter under a subtitle of Spoken's, which stands under the character then: Readability.lua)
 		if goal > CALM_ALPHA and ns.SpokenSubtitleShown and ns.SpokenSubtitleShown() then goal = CALM_ALPHA end
 		if goal ~= fadeGoal then fadeGoal, fromLevel, fadeStart = goal, level, now end
 		if level == goal then return end
-		local p = (now - fadeStart) / (goal == 1 and AWAKE_IN or AWAKE_OUT)
-		SetLevel(fromLevel + (goal - fromLevel) * EaseOut(p))
+		local up = goal > fromLevel
+		local p = (now - fadeStart) / (up and AWAKE_IN or AWAKE_OUT)
+		SetLevel(fromLevel + (goal - fromLevel) * (up and EaseOut(p) or Smooth(p)))
 	end)
 end
 

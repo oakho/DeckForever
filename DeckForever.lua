@@ -708,10 +708,11 @@ local function NarrowHeader(header, width, textMargin)
 	end
 	if header.Text then header.Text:SetWidth(width - textMargin) end
 end
-local function NarrowQuests()
-	local tracker = _G.ObjectiveTrackerFrame
-	if not oursActive or not tracker or tracker:IsForbidden() then return end
-	local width = QuestsWidth()
+-- Improved Forever's quest tracker (ImprovedForever_QuestTracker), a fork of the game's shown instead of
+-- it, is held by the game's tracker's top edge (both corners): as wide, its contents narrowed the same way
+local TRACKERS = { "ObjectiveTrackerFrame", "IFObjectiveTrackerFrame" }
+local function NarrowTracker(tracker, width)
+	if not tracker or tracker:IsForbidden() then return end
 	tracker:SetClampedToScreen(false)
 	NarrowHeader(tracker.Header, width, 52)
 	for _, module in ipairs(tracker.modules or {}) do
@@ -721,12 +722,20 @@ local function NarrowQuests()
 		end
 	end
 end
-local questsHooked
+local function NarrowQuests()
+	if not oursActive then return end
+	local width = QuestsWidth()
+	for _, name in ipairs(TRACKERS) do NarrowTracker(_G[name], width) end
+end
+local questsHooked = {}
 local function HookQuests()
-	local tracker = _G.ObjectiveTrackerFrame
-	if questsHooked or not tracker or not tracker.AddModule then return end
-	questsHooked = true
-	hooksecurefunc(tracker, "AddModule", function() NarrowQuests() end)
+	for _, name in ipairs(TRACKERS) do
+		local tracker = _G[name]
+		if not questsHooked[name] and tracker and tracker.AddModule then
+			questsHooked[name] = true
+			hooksecurefunc(tracker, "AddModule", function() NarrowQuests() end)
+		end
+	end
 end
 
 local function FindLayout(layouts, name)

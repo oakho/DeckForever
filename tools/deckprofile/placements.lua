@@ -11,7 +11,8 @@ DeckPlacements = function(A, E, live, C)
 	local M = 8                -- the gap to the screen's edges, as everywhere in DeckForever
 	local B = M + 4            -- from the bottom: over the XP bar
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
-	local QUESTS = 261         -- the game's quest tracker (DeckForever's layout)
+	local QUESTS = 210         -- the quests as drawn (narrowed to the minimap: 202, + their quest dots and
+	                           -- header art, 8 left of that)
 
 	------------------------------------------------------------------ AishCore
 	-- The combat block centred on the screen, below and right of the character (DeckForever's camera puts

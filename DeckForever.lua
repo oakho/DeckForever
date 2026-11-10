@@ -50,12 +50,14 @@ local LAYOUT = {
 		settings = { Visibility = 2 } },
 	-- the cooldowns between the player and target frames (216 px between them): the essential ones
 	-- level with their bottom (4 a row), the utility ones right under them; the tracked buff icons
-	-- above the player frame
+	-- hidden (VisibleSetting 2 = Enum.CooldownViewerVisibleSetting.Hidden: they showed all the time,
+	-- by the character)
 	{ system = "CooldownViewer", index = 1, point = "BOTTOM", relativePoint = "BOTTOM", x = 0, y = 248,
 		settings = { IconLimit = 4 } },
 	{ system = "CooldownViewer", index = 2, point = "TOP", relativePoint = "BOTTOM", x = 0, y = 244,
 		settings = { IconLimit = 6 } },
-	{ system = "CooldownViewer", index = 3, point = "BOTTOMLEFT", relativePoint = "BOTTOM", x = -340, y = 352 },
+	{ system = "CooldownViewer", index = 3, point = "BOTTOMLEFT", relativePoint = "BOTTOM", x = -340, y = 352,
+		settings = { VisibleSetting = 2 } },
 	-- (test) bottom-left: the chat, from the left edge to the XP bar M away, as tall as the minimap and
 	-- its header (its tabs hidden: HideChatTabs; its clamp taken off: UnclampChat). Top-left: the
 	-- gamepad help (Legend.lua), the buff bars under its tallest group

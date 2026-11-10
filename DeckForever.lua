@@ -391,6 +391,10 @@ local FADED = {
 	ObjectiveTrackerFrame = function()
 		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
 	end,
+	-- (Improved Forever's quest tracker, shown in the game's one's place: the same)
+	IFObjectiveTrackerFrame = function()
+		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
+	end,
 	-- the gamepad help: hidden at rest (its moves are known by heart); shown while LB or RB is held (their
 	-- groups) and in menus
 	DeckForeverLegend = function(legend)

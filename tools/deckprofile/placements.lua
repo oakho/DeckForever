@@ -42,6 +42,10 @@ DeckPlacements = function(A, E, live, C)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]
 	if consumables then consumables.enabled = false end
 	A.location.enabled = false
+	-- the campfire HUD (a big diamond by a campfire): not wanted on the Deck
+	A.campfire = A.campfire or {}
+	A.campfire.enabled = false
+	if A.spellEffects then A.spellEffects.campfireEnabled = false end
 	-- the level badge at AishUI's size (DeckForever fills the corner under it: Readability.lua)
 	local badge = A.xpBar and A.xpBar.levelBg
 	if badge then badge.x, badge.y, badge.w, badge.h = -20.2, -6.5, 87, 54 end

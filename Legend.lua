@@ -78,11 +78,16 @@ local rows, icons, used = {}, {}, {}
 local shownGroup
 
 local function Build()
-	-- the look of the game's tooltips: their backdrop, their fonts
-	panel = CreateFrame("Frame", "DeckForeverLegend", UIParent, "TooltipBackdropTemplate")
+	-- the look of the game's gamepad legends (the loot window's footer box: its slot and its frame, stretched
+	-- to its size), the tooltips' fonts
+	panel = CreateFrame("Frame", "DeckForeverLegend", UIParent)
+	for _, atlas in ipairs({ "gamepad-footer-slot-bg", "gamepad-footer-slot-frameneutral" }) do
+		local t = panel:CreateTexture(nil, "BACKGROUND")
+		t:SetAtlas(atlas)
+		t:SetAllPoints()
+	end
 	panel:SetFrameStrata("LOW")
-	-- (the tooltip border is drawn 2 inside the frame: that border M from the edges)
-	panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", M - 2, -(M - 2))
+	panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", M, -M)
 	panel:Hide()
 	panel.line = panel:CreateTexture(nil, "ARTWORK")
 	panel.line:SetHeight(1)

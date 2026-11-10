@@ -425,7 +425,8 @@ local FADED = {
 --   * the gamepad bar (immersion): hidden out of combat; shown in combat, and out of combat for
 --     AWAKE_TIME after LT, RT or the d-pad is pressed ("awake", set below: our own
 --     handler's attribute, which addon code may set out of combat). Hidden, it still works: the first
---     press both acts and shows it. After a fight it stays AWAKE_TIME before hiding.
+--     press both acts and shows it. After a fight it fades out at once: AishCore's out-of-combat
+--     circles come in by the character then, over the bar's top.
 local AWAKE_TIME = 5
 local CALM_FRAMES = { { "PlayerFrame", CALM_ALPHA }, { "GamepadMainActionBarFrame", 0, true } }
 local calmDriver
@@ -472,7 +473,6 @@ end
 --   * LT / RT held: it shows its left / right page (…LeftCenteredAnchorLeftBar, …RightCenteredAnchorRightBar)
 --   * the d-pad: its main page's buttons 1 to 4 show pushed (5 to 8 are A / B / X / Y: they don't wake it,
 --     nor does LB, the allies' targeting page)
---   * the end of a fight (the bar stays AWAKE_TIME)
 -- None of it while a window, a menu or a text box has the focus (ElsewhereFocus).
 -- Read 10 times a second, out of combat: only getters, nothing hooked, nothing set on Blizzard's frames.
 local PAGE = "GamepadMainActionBarFramePageUnit"
@@ -521,9 +521,9 @@ local function Wake() awakeUntil = GetTime() + AWAKE_TIME end
 do
 	local watcher = CreateFrame("Frame")
 	watcher:RegisterEvent("PLAYER_REGEN_ENABLED")
-	watcher:SetScript("OnEvent", function()          -- (shown through the fight: no fade in after it)
-		Wake()
-		fadeGoal, fromLevel, fadeStart = 1, 1, GetTime()
+	watcher:SetScript("OnEvent", function()          -- (shown through the fight: faded out from there)
+		awakeUntil = 0
+		fadeGoal, fromLevel, fadeStart = 0, 1, GetTime()
 		SetLevel(1)
 	end)
 	watcher:SetScript("OnUpdate", function(_, elapsed)

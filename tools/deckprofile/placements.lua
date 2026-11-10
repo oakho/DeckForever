@@ -89,6 +89,11 @@ DeckPlacements = function(A, E, live, C)
 	for _, bar in pairs(dataBars or {}) do
 		if OFF[bar.name] then bar.visibility = "never" end
 	end
+	-- the debuffs filled from their right end, as the buffs (from the left, the first one sat mid-screen:
+	-- their frame is 12 icons wide), new rows under (not off the screen's top)
+	local uf = E.addons.EllesmereUIUnitFrames
+	local debuffs = uf and uf.playerAuraBars and uf.playerAuraBars.defaultDebuffs
+	if debuffs then debuffs.growDirection, debuffs.iconWrapDirection = "LEFT", "DOWN" end
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -(M + MAP_RIM), offsetY = 0,
 			edge = { key = "SCREEN_BOTTOM", side = "TOP", offset = B } }

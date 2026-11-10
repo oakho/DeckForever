@@ -46,6 +46,12 @@ DeckPlacements = function(A, E, live, C)
 	A.campfire = A.campfire or {}
 	A.campfire.enabled = false
 	if A.spellEffects then A.spellEffects.campfireEnabled = false end
+	-- the big AishUI logo on the AFK screen
+	local afk = A.afkMode and A.afkMode.elements
+	if afk then
+		afk.aishLogo = afk.aishLogo or {}
+		afk.aishLogo.enable = false
+	end
 	-- the level badge at AishUI's size (DeckForever fills the corner under it: Readability.lua)
 	local badge = A.xpBar and A.xpBar.levelBg
 	if badge then badge.x, badge.y, badge.w, badge.h = -20.2, -6.5, 87, 54 end

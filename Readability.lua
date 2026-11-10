@@ -126,9 +126,10 @@ local function SpokenTop()
 	end
 	return UIParent:GetHeight() * CALM_TOP
 end
--- (out in AWAY seconds, sliding SLIDE the move's way, fading out, eased in and out; unseen for GAP, as the
--- camera moves; in in BACK, sliding the last SLIDE, fading in, easing to a stop)
-local AWAY, GAP, BACK, SLIDE = 0.7, 0.2, 1.0, 30
+-- (out in AWAY seconds, sliding SLIDE the move's way, fading out, slow then quicker (quartic); unseen for
+-- GAP, as the camera moves; in in BACK, sliding the last SLIDE, fading in, quick then braking to a stop
+-- (quintic))
+local AWAY, GAP, BACK, SLIDE = 0.4, 0.1, 0.7, 40   -- (0.8 in all was too quick, 1.9 too slow)
 local glide = CreateFrame("Frame")
 local function PlaceSpoken(event)
 	local env = rawget(_G, "SpokenEnv")
@@ -159,16 +160,15 @@ local function PlaceSpoken(event)
 	glide:SetScript("OnUpdate", function(self)
 		local t = GetTime() - start
 		if t < AWAY then
-			local eased = Smooth(t / AWAY)
-			pcall(subtitle.Place, subtitle, from + way * SLIDE * eased, 0)
-			Alpha(alpha * (1 - eased))
+			local q = t / AWAY
+			pcall(subtitle.Place, subtitle, from + way * SLIDE * q ^ 4, 0)
+			Alpha(alpha * (1 - Smooth(q)))
 		elseif t < AWAY + GAP then
 			Alpha(0)
 		else
 			local q = math.min(1, (t - AWAY - GAP) / BACK)
-			local eased = 1 - (1 - q) ^ 3
-			pcall(subtitle.Place, subtitle, to - way * SLIDE * (1 - eased), 0)
-			Alpha(Smooth(q))
+			pcall(subtitle.Place, subtitle, to - way * SLIDE * (1 - q) ^ 5, 0)
+			Alpha(1 - (1 - q) ^ 3)
 			if q >= 1 then self:SetScript("OnUpdate", nil) end
 		end
 	end)

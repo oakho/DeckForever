@@ -45,7 +45,8 @@ DeckPlacements = function(A, E, live, C)
 	-- health and resource on its left, well fed on its right. Fractions of the screen from the bottom left.
 	-- (AishCore's own followPlayer setting is read by nothing.)
 	local h, r, w = A.healthCircle, A.outOfCombatResourceCircle, A.wellFedCircle
-	h.anchorPctX, h.anchorPctY, h.x, h.y = 0.394, 0.41, 0, 0
+	-- the health circle down-left of the resource one, as AishUI has them (they overlapped at 0.394, 0.41)
+	h.anchorPctX, h.anchorPctY, h.x, h.y = 0.4006 - 0.0718, 0.3925 - 0.0686, 0, 0
 	r.anchorPctX, r.anchorPctY, r.x, r.y = 0.4006, 0.3925, 0, 0
 	w.anchorPctX, w.anchorPctY, w.x, w.y = 0.488, 0.41, 0, 0
 	-- not on the Deck: the consumables (dynamic bar 2), the zone's name (wider than the minimap it sat

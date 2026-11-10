@@ -23,6 +23,13 @@ DeckPlacements = function(A, E, live, C)
 	-- as wide as the room between the gamepad bar's LB and RB icons (216: they stand up beside it), M off
 	-- each (it ran 28 over both at AishUI's 272)
 	A.castBar.width = 216 - 2 * M
+	-- the priority bar's two pairs (its "rotation" icons) outside the LB and RB icons (their outer edges 158
+	-- either side of the centre), M off them, at their height (they sat on them)
+	local pb = A.priorityBar
+	if pb then
+		local size, gap = pb.iconSize or 26, pb.iconSpacing or 7
+		pb.sideOffset = 158 + M + 2 * size + gap   -- (from the centre to each pair's outer edge)
+	end
 	local bars = A.unitBars.bars
 	bars.player.x, bars.target.x, bars.focus.x = CX - 179, CX + 179, CX + 450
 	-- the names in Friz Quadrata (the game's serif, as Improved Forever's target header: more immersive than

@@ -41,17 +41,19 @@ DeckPlacements = function(A, E, live, C)
 	bars.pet.layout, bars.pet.mirrorOf, bars.pet.relX, bars.pet.relY, bars.pet.width = "parent", "player", 0, -30, 140
 	local tot = bars.targettarget
 	tot.layout, tot.mirrorOf, tot.relX, tot.relY, tot.width = "parent", "target", 0, -30, 140
-	-- The out-of-combat circles floating by the character, as near as they go without touching it (Game
-	-- Mode, default zoom: it stands 44 % across, about 22 wide either side, its knees at 41 % up; on the
-	-- Deck's screen, 1333 x 800). The resource circle (32) by its left side at its waist, the health circle
-	-- (54) down-left of it, diagonal as AishUI has them, M between them; well fed (60) by its right side.
-	-- Fractions of the screen from the bottom left. (AishCore's own followPlayer setting is read by nothing.)
+	-- The out-of-combat circles floating by the character (Game Mode, default zoom: it stands 44 % across,
+	-- about 22 wide either side, its knees at 41 % up; on the Deck's screen, 1333 x 800). As AishUI shows
+	-- them: the resource circle (32) a badge on the health circle's (54) rim, down-right of it (55 degrees
+	-- below, the rims touching); the pair by the character's left side at its knees, M off it; well fed
+	-- (60) by its right side. Fractions of the screen from the bottom left. (AishCore's own followPlayer
+	-- setting is read by nothing.)
 	local h, r, w = A.healthCircle, A.outOfCombatResourceCircle, A.wellFedCircle
 	local SW, SH, CX_PCT, BODY = 1333, 800, 0.44, 22
-	local rx, ry = CX_PCT * SW - BODY - M - 16, 0.45 * SH
-	local d = (16 + M + 27) / math.sqrt(2)        -- (centre to centre, 45 degrees)
-	r.anchorPctX, r.anchorPctY, r.x, r.y = rx / SW, ry / SH, 0, 0
-	h.anchorPctX, h.anchorPctY, h.x, h.y = (rx - d) / SW, (ry - d) / SH, 0, 0
+	local a = math.rad(55)
+	local bx, by = (27 + 16) * math.cos(a), -(27 + 16) * math.sin(a)   -- (the badge from the health's centre)
+	local hx, hy = CX_PCT * SW - BODY - M - 16 - bx, 0.41 * SH
+	h.anchorPctX, h.anchorPctY, h.x, h.y = hx / SW, hy / SH, 0, 0
+	r.anchorPctX, r.anchorPctY, r.x, r.y = (hx + bx) / SW, (hy + by) / SH, 0, 0
 	w.anchorPctX, w.anchorPctY, w.x, w.y = (CX_PCT * SW + BODY + M + 30) / SW, 0.41, 0, 0
 	-- not on the Deck: the consumables (dynamic bar 2), the zone's name (wider than the minimap it sat
 	-- over: EllesmereUI's minimap shows it instead, inside), the auto turn-in box (top left)

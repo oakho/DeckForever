@@ -20,6 +20,9 @@ DeckPlacements = function(A, E, live, C)
 	local CX = 0
 	A.resourceCircle.x = CX
 	A.castBar.x, A.castBar.y = CX, 175
+	-- as wide as the room between the gamepad bar's LB and RB icons (216: they stand up beside it), M off
+	-- each (it ran 28 over both at AishUI's 272)
+	A.castBar.width = 216 - 2 * M
 	local bars = A.unitBars.bars
 	bars.player.x, bars.target.x, bars.focus.x = CX - 179, CX + 179, CX + 450
 	-- the names in Friz Quadrata (the game's serif, as Improved Forever's target header: more immersive than

@@ -14,10 +14,13 @@
 --     outlined in black; on the orange "low" pill the count is dark brown: a blur. Plain Arial Narrow
 --     with a light shadow, readable on the dark pill and the orange one (Easy Controller sets the colour).
 --   * Spoken's subtitles (its narrator's captions, UI/Subtitle.lua): their top edge 336 up from the bottom,
---     down over AishCore's fight block and the gamepad bar (up to about 300). Put up over the character,
---     centred still, their top M under Improved Forever's target header (raised above: down to about
---     HEADER_BOTTOM under the screen's top). Only while not dragged: a place of the player's (Spoken's
---     Layout().Subtitle without our mark) is left as it is.
+--     down over AishCore's fight block and the gamepad bar (up to about 300). Put over the character,
+--     centred still, by the camera's two views (Camera.lua): out of a fight under the character (the
+--     fight's bars and the gamepad bar are hidden then), their top M under AishCore's resource badge,
+--     which hangs a little under its feet; in a fight (it stands higher) over it, M under the game's red
+--     error lines (UIErrorsFrame, read where it is). As a fight begins and ends they slide away fading
+--     out, slowly, then slide in fading in at their new place. Only while not dragged: a place of the player's (Spoken's Layout().Subtitle without our mark)
+--     is left as it is.
 --------------------------------------------------------------------------------
 
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -111,19 +114,67 @@ f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it 
 f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
--- Spoken's subtitles over the character (see the top)
-local HEADER_BOTTOM = 180              -- (the header's rule at HEADER_Y, then the name, the quests, the cast line)
-local function PlaceSpoken()
+-- Spoken's subtitles by the character (see the top)
+local CALM_TOP = 0.256                 -- (out of a fight, up from the bottom: M under the resource badge,
+                                       -- 213 up on the Deck's 800: tools/deckprofile/placements.lua)
+local function SpokenTop()
+	if InCombatLockdown() or UnitAffectingCombat("player") then
+		local errors = _G.UIErrorsFrame
+		local bottom = errors and errors:GetBottom()
+		local scale = errors and errors:GetEffectiveScale() / UIParent:GetEffectiveScale() or 1
+		return (bottom and bottom * scale or UIParent:GetHeight() - 182) - 8
+	end
+	return UIParent:GetHeight() * CALM_TOP
+end
+-- (out in AWAY seconds, sliding SLIDE the move's way, fading out, eased in and out; unseen for GAP, as the
+-- camera moves; in in BACK, sliding the last SLIDE, fading in, easing to a stop)
+local AWAY, GAP, BACK, SLIDE = 0.7, 0.2, 1.0, 30
+local glide = CreateFrame("Frame")
+local function PlaceSpoken(event)
 	local env = rawget(_G, "SpokenEnv")
 	local addon = env and rawget(env, "Addon")
 	if not (addon and addon.Layout and addon.db) then return end
 	local layout = addon:Layout()
 	local saved = layout.Subtitle
 	if type(saved) == "table" and not saved.deckForever then return end   -- (dragged by the player)
-	layout.Subtitle = { top = UIParent:GetHeight() - HEADER_BOTTOM - 8, x = 0, deckForever = true }
 	local subtitle = rawget(env, "Subtitle")
-	if subtitle and subtitle.frame and subtitle.Place then subtitle:Place() end
+	local from = type(saved) == "table" and tonumber(saved.top)
+	local to = SpokenTop()
+	-- (the place kept is the end one: Spoken placing it meanwhile puts it there)
+	layout.Subtitle = { top = to, x = 0, deckForever = true }
+	if not (subtitle and subtitle.frame and subtitle.Place) then return end
+	local frame = subtitle.frame
+	local moving = event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED"
+	glide:SetScript("OnUpdate", nil)
+	if not (moving and from and frame:IsShown()) or from == to then
+		subtitle:Place()
+		return
+	end
+	local way = to > from and 1 or -1
+	local start, alpha = GetTime(), frame:GetAlpha()
+	local function Alpha(value)            -- (not while Spoken fades it in or out itself)
+		if not subtitle.fadeTime then frame:SetAlpha(value) end
+	end
+	local function Smooth(q) return 0.5 - 0.5 * math.cos(math.pi * q) end
+	glide:SetScript("OnUpdate", function(self)
+		local t = GetTime() - start
+		if t < AWAY then
+			local eased = Smooth(t / AWAY)
+			pcall(subtitle.Place, subtitle, from + way * SLIDE * eased, 0)
+			Alpha(alpha * (1 - eased))
+		elseif t < AWAY + GAP then
+			Alpha(0)
+		else
+			local q = math.min(1, (t - AWAY - GAP) / BACK)
+			local eased = 1 - (1 - q) ^ 3
+			pcall(subtitle.Place, subtitle, to - way * SLIDE * (1 - eased), 0)
+			Alpha(Smooth(q))
+			if q >= 1 then self:SetScript("OnUpdate", nil) end
+		end
+	end)
 end
 local spokenWatch = CreateFrame("Frame")
-spokenWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
-spokenWatch:SetScript("OnEvent", function() pcall(PlaceSpoken) end)
+for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
+	spokenWatch:RegisterEvent(event)
+end
+spokenWatch:SetScript("OnEvent", function(_, event) pcall(PlaceSpoken, event) end)

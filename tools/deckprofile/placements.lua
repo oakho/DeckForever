@@ -79,6 +79,9 @@ DeckPlacements = function(A, E, live, C)
 	if A.addonCompartment then A.addonCompartment.enabled = false end
 	-- the target's name bar at the top (Improved Forever's target header shows it, readable for the gamepad)
 	if A.topTargetBar then A.topTargetBar.enabled = false end
+	-- the target's auras (AishCore's TargetAuras, top right: over the game's buffs): Improved Forever's
+	-- target header shows them, under the name
+	if A.targetAuras then A.targetAuras.enabled = false end
 	A.comfort = A.comfort or {}
 	A.comfort.questTurnInBox = false
 

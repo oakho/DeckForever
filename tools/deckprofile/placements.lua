@@ -24,17 +24,23 @@ DeckPlacements = function(A, E, live, C)
 	-- each (it ran 28 over both at AishUI's 272)
 	A.castBar.width = 216 - 2 * M
 	-- The priority bar's two pairs (its "rotation" icons) as AishUI has them: each against its unit bar's
-	-- inner end, between it and the centre circle (83 across), on the bar's line (257 up, measured), M off
-	-- the circle; the player and target bars moved out by what that takes (at x 179 their inner ends stood
+	-- inner end, between it and the centre circle (83 across), on the bar's line (257 up, measured), RING_GAP
+	-- off the circle; the player and target bars moved out by what that takes (at x 179 their inner ends stood
 	-- 73.7 from the centre, measured: no room for a pair)
 	local RING, BAR_LINE, INNER_AT_179 = 83, 257, 73.7
 	local pb = A.priorityBar
 	local size, gap = pb and pb.iconSize or 26, pb and pb.iconSpacing or 7
-	local INNER = RING / 2 + M + 2 * size + gap     -- (the bars' inner ends and the pairs' outer edges, from the centre)
+	local RING_GAP = 2 * M                          -- (between the circle and the pairs: M looked cramped)
+	local INNER = RING / 2 + RING_GAP + 2 * size + gap   -- (the bars' inner ends and the pairs' outer edges, from the centre)
 	local BAR_X = 179 + (INNER - INNER_AT_179)
 	if pb then
 		pb.sideOffset = INNER
 		pb.verticalOffset = BAR_LINE + size / 2 - 400   -- (its top, from the screen's centre)
+		-- the paladin's empty fourth slot (left, "B"): Hammer of Justice, else Divine Protection meanwhile
+		-- (a slot shows the first spell of its list that's learned). Only while empty: the player's kept
+		local paladin = pb.slotsBySpec and pb.slotsBySpec["class:PALADIN"]
+		local slot = paladin and paladin.B
+		if slot and (not slot.spellIDs or #slot.spellIDs == 0) then slot.spellIDs = { 853, 498 } end
 	end
 	local bars = A.unitBars.bars
 	bars.player.x, bars.target.x, bars.focus.x = CX - BAR_X, CX + BAR_X, CX + 450

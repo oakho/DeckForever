@@ -12,7 +12,17 @@
 --   * the cooldowns' numbers on the action buttons (the game's own option, countdownForCooldowns: off by
 --     default): on, and bigger on the gamepad bar's buttons (their cooldowns' own SetCountdownFont, a font
 --     of ours: nothing the button reads), set once out of combat
+--   * a macro "Quêtes" (account-wide, made once if missing, out of combat): folds or unfolds the quest
+--     tracker (Improved Forever's, else the game's), to put on a button or a wheel of the gamepad
 --------------------------------------------------------------------------------
+
+local QUESTS_MACRO = "Quêtes"
+local QUESTS_BODY = "/run local t=IFObjectiveTrackerFrame or ObjectiveTrackerFrame if t and t.ToggleCollapsed then t:ToggleCollapsed() end"
+local function QuestsMacro()
+	if InCombatLockdown() or not CreateMacro or GetMacroIndexByName(QUESTS_MACRO) ~= 0 then return end
+	local count = GetNumMacros()
+	if count < (MAX_ACCOUNT_MACROS or 120) then CreateMacro(QUESTS_MACRO, "INV_Misc_Book_08", QUESTS_BODY) end
+end
 
 local COUNTDOWN_SIZE = 18
 local countdownFont = CreateFont("DeckForeverCountdownFont")
@@ -36,7 +46,7 @@ local numbers = CreateFrame("Frame")
 numbers:RegisterEvent("PLAYER_LOGIN")
 numbers:SetScript("OnEvent", function()
 	if GetCVar("countdownForCooldowns") ~= "1" then SetCVar("countdownForCooldowns", "1") end
-	C_Timer.After(2, function() if not InCombatLockdown() then pcall(BigCountdowns) end end)
+	C_Timer.After(2, function() if not InCombatLockdown() then pcall(BigCountdowns) pcall(QuestsMacro) end end)
 end)
 
 local watch = CreateFrame("Frame")

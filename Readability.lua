@@ -13,6 +13,11 @@
 --   * Easy Controller's supplies (bag space, reagents): their counts are in NumberFontNormal, thickly
 --     outlined in black; on the orange "low" pill the count is dark brown: a blur. Plain Arial Narrow
 --     with a light shadow, readable on the dark pill and the orange one (Easy Controller sets the colour).
+--   * Spoken's subtitles (its narrator's captions, UI/Subtitle.lua): their top edge 336 up from the bottom,
+--     down over AishCore's fight block and the gamepad bar (up to about 300). Put up over the character,
+--     centred still, their top M under Improved Forever's target header (raised above: down to about
+--     HEADER_BOTTOM under the screen's top). Only while not dragged: a place of the player's (Spoken's
+--     Layout().Subtitle without our mark) is left as it is.
 --------------------------------------------------------------------------------
 
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -105,3 +110,20 @@ f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the head
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
 f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
+
+-- Spoken's subtitles over the character (see the top)
+local HEADER_BOTTOM = 180              -- (the header's rule at HEADER_Y, then the name, the quests, the cast line)
+local function PlaceSpoken()
+	local env = rawget(_G, "SpokenEnv")
+	local addon = env and rawget(env, "Addon")
+	if not (addon and addon.Layout and addon.db) then return end
+	local layout = addon:Layout()
+	local saved = layout.Subtitle
+	if type(saved) == "table" and not saved.deckForever then return end   -- (dragged by the player)
+	layout.Subtitle = { top = UIParent:GetHeight() - HEADER_BOTTOM - 8, x = 0, deckForever = true }
+	local subtitle = rawget(env, "Subtitle")
+	if subtitle and subtitle.frame and subtitle.Place then subtitle:Place() end
+end
+local spokenWatch = CreateFrame("Frame")
+spokenWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
+spokenWatch:SetScript("OnEvent", function() pcall(PlaceSpoken) end)

@@ -23,15 +23,21 @@ DeckPlacements = function(A, E, live, C)
 	-- as wide as the room between the gamepad bar's LB and RB icons (216: they stand up beside it), M off
 	-- each (it ran 28 over both at AishUI's 272)
 	A.castBar.width = 216 - 2 * M
-	-- the priority bar's two pairs (its "rotation" icons) outside the LB and RB icons (their outer edges 158
-	-- either side of the centre), M off them, at their height (they sat on them)
+	-- The priority bar's two pairs (its "rotation" icons) as AishUI has them: each against its unit bar's
+	-- inner end, between it and the centre circle (83 across), on the bar's line (257 up, measured), M off
+	-- the circle; the player and target bars moved out by what that takes (at x 179 their inner ends stood
+	-- 73.7 from the centre, measured: no room for a pair)
+	local RING, BAR_LINE, INNER_AT_179 = 83, 257, 73.7
 	local pb = A.priorityBar
+	local size, gap = pb and pb.iconSize or 26, pb and pb.iconSpacing or 7
+	local INNER = RING / 2 + M + 2 * size + gap     -- (the bars' inner ends and the pairs' outer edges, from the centre)
+	local BAR_X = 179 + (INNER - INNER_AT_179)
 	if pb then
-		local size, gap = pb.iconSize or 26, pb.iconSpacing or 7
-		pb.sideOffset = 158 + M + 2 * size + gap   -- (from the centre to each pair's outer edge)
+		pb.sideOffset = INNER
+		pb.verticalOffset = BAR_LINE + size / 2 - 400   -- (its top, from the screen's centre)
 	end
 	local bars = A.unitBars.bars
-	bars.player.x, bars.target.x, bars.focus.x = CX - 179, CX + 179, CX + 450
+	bars.player.x, bars.target.x, bars.focus.x = CX - BAR_X, CX + BAR_X, CX + 450
 	-- the names in Friz Quadrata (the game's serif, as Improved Forever's target header: more immersive than
 	-- AishUI's Bebas); the numbers stay in AishUI's sans serif. (Friz is wider: a size under Bebas's 16)
 	for _, bar in pairs(bars) do

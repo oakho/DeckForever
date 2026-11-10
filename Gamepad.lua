@@ -9,7 +9,35 @@
 --     game's box from an addon taints the loot window), it hangs over nothing. Given a box of its own in
 --     the legend's look (its very art), M right of the game's (the game's box never touched: ours, round its prompt, a
 --     frame of Improved Forever's)
+--   * the cooldowns' numbers on the action buttons (the game's own option, countdownForCooldowns: off by
+--     default): on, and bigger on the gamepad bar's buttons (their cooldowns' own SetCountdownFont, a font
+--     of ours: nothing the button reads), set once out of combat
 --------------------------------------------------------------------------------
+
+local COUNTDOWN_SIZE = 18
+local countdownFont = CreateFont("DeckForeverCountdownFont")
+countdownFont:SetFont("Fonts\\FRIZQT__.TTF", COUNTDOWN_SIZE, "OUTLINE")
+countdownFont:SetShadowOffset(1, -1)
+countdownFont:SetShadowColor(0, 0, 0, 0.8)
+
+local function BigCountdowns()
+	local f = EnumerateFrames()
+	while f do
+		if f:GetObjectType() == "Cooldown" and not f:IsForbidden() and f.SetCountdownFont then
+			local parent = f:GetParent()
+			local name = parent and not parent:IsForbidden() and parent:GetName()
+			if name and name:find("^GamepadMainActionBarFrame") then pcall(f.SetCountdownFont, f, "DeckForeverCountdownFont") end
+		end
+		f = EnumerateFrames(f)
+	end
+end
+
+local numbers = CreateFrame("Frame")
+numbers:RegisterEvent("PLAYER_LOGIN")
+numbers:SetScript("OnEvent", function()
+	if GetCVar("countdownForCooldowns") ~= "1" then SetCVar("countdownForCooldowns", "1") end
+	C_Timer.After(2, function() if not InCombatLockdown() then pcall(BigCountdowns) end end)
+end)
 
 local watch = CreateFrame("Frame")
 watch:RegisterEvent("ADDON_LOADED")

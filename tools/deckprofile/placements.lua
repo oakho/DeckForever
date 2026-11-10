@@ -11,6 +11,8 @@ DeckPlacements = function(A, E, live, C)
 	local M = 8                -- the gap to the screen's edges, as everywhere in DeckForever
 	local B = M + 4            -- from the bottom: over the XP bar
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
+	local MAP_RIM = 2          -- its border, drawn that far outside its frame on the right (measured: the
+	                           -- frame M from the edge left the border 6 px from it, the quests' at 8)
 	local QUESTS = 210         -- the quests as drawn (narrowed to the minimap: 202, + their quest dots and
 	                           -- header art, 8 left of that)
 
@@ -75,7 +77,7 @@ DeckPlacements = function(A, E, live, C)
 	-- at its bottom right
 	local mm = E.addons.EllesmereUIMinimap and E.addons.EllesmereUIMinimap.minimap
 	if mm then
-		mm.position = { point = "CENTER", relPoint = "CENTER", x = 640 - M - MAP / 2, y = -(400 - B - MAP / 2) }
+		mm.position = { point = "CENTER", relPoint = "CENTER", x = 640 - M - MAP_RIM - MAP / 2, y = -(400 - B - MAP / 2) }
 		mm.locationMode, mm.locationPosition, mm.zoneShowSubZone = "inside", "top", true
 		mm.coordsPosition = "bottomRight"
 	end
@@ -88,7 +90,7 @@ DeckPlacements = function(A, E, live, C)
 		if OFF[bar.name] then bar.visibility = "never" end
 	end
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
-		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -M, offsetY = 0,
+		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -(M + MAP_RIM), offsetY = 0,
 			edge = { key = "SCREEN_BOTTOM", side = "TOP", offset = B } }
 		-- the buffs top right, left of the quests; the debuffs under them
 		anchors.PAB_Buffs = { side = "BOTTOM", target = "SCREEN_TOP", offsetX = 0, offsetY = -M,

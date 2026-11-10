@@ -35,9 +35,8 @@ local AURA_HORIZONTAL = EnumValue(Enum.AuraFrameOrientation, "Horizontal", 0)
 local AURA_RIGHT = EnumValue(Enum.AuraFrameIconDirection, "Right", 1)
 local AURA_LEFT = EnumValue(Enum.AuraFrameIconDirection, "Left", 0)
 local AURA_DOWN = EnumValue(Enum.AuraFrameIconWrap, "Down", 0)
-local AURAS_A_ROW = 5           -- icons a row (Edit Mode's value is the count): what fits between the
-                                -- header and the quests on the Deck's screen (172)
-local AURAS_SPAN = AURAS_A_ROW * 30 + (AURAS_A_ROW - 1) * 5   -- (icons 30, 5 apart: the game's defaults)
+local AURAS_A_ROW = 5           -- icons a row (Edit Mode's value is the count): 170 of the header's
+                                -- half, the middle left clear over its diamond
 local BUFFS_BUTTON = 15          -- the buffs' collapse button, at their frame's outer end (hidden: its room kept)
 local LAYOUT = {
 	-- bottom up: the XP bar on the edge; Easy Controller's L3 / R3 (they hang 54 under the main bar)
@@ -93,13 +92,13 @@ local LAYOUT = {
 	{ system = "ObjectiveTracker", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 1) + (261 - 202), y = -M,
 		settings = { Height = 0 } },
 	-- the game's buffs and debuffs (the gamepad's "Améliorations", LB / RB / Y, goes through these: not
-	-- EllesmereUI's, turned off on the Deck profile) at the top either side of Improved Forever's target
-	-- header (its line, HEADER either side of the top's centre), growing towards it from their outer end:
-	-- AURAS_A_ROW icons a row (AURAS_SPAN across), the last one M from the header; more rows under.
-	-- (Their icons sit 1 above the frame)
-	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOP", x = HEADER + M + AURAS_SPAN + BUFFS_BUTTON, y = -(M + 1),
+	-- EllesmereUI's, turned off on the Deck profile) at the top, within Improved Forever's target header's
+	-- width (its line, HEADER either side of the top's centre; its diamond and name lower down): the
+	-- debuffs from its left end, the buffs from its right end, each growing towards the centre,
+	-- AURAS_A_ROW icons a row; more rows under. (Their icons sit 1 above the frame)
+	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOP", x = HEADER + BUFFS_BUTTON, y = -(M + 1),
 		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_LEFT, IconWrap = AURA_DOWN, IconLimitBuffFrame = AURAS_A_ROW } },
-	{ system = "AuraFrame", index = 2, point = "TOPLEFT", relativePoint = "TOP", x = -(HEADER + M + AURAS_SPAN), y = -(M + 1),
+	{ system = "AuraFrame", index = 2, point = "TOPLEFT", relativePoint = "TOP", x = -HEADER, y = -(M + 1),
 		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_RIGHT, IconWrap = AURA_DOWN, IconLimitDebuffFrame = AURAS_A_ROW } },
 	-- the game's menu and bags (hidden by the gamepad UI) out of the way, bottom-right
 	{ system = "MicroMenu", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = B },

@@ -19,9 +19,12 @@
 --     fight's bars and the gamepad bar are hidden then), their top M under AishCore's resource badge,
 --     which hangs a little under its feet; in a fight (it stands higher) over it, M under the game's red
 --     error lines (UIErrorsFrame, read where it is). As a fight begins and ends they slide away fading
---     out, slowly, then slide in fading in at their new place. Only while not dragged: a place of the player's (Spoken's Layout().Subtitle without our mark)
+--     out, slowly, then slide in fading in at their new place. Drawn over the gamepad bar, which is
+--     quieter under them (DeckForever.lua, its fade). Only while not dragged: a place of the player's (Spoken's Layout().Subtitle without our mark)
 --     is left as it is.
 --------------------------------------------------------------------------------
+
+local _, ns = ...
 
 local FONT = "Fonts\\FRIZQT__.TTF"
 local NAME_SIZE = 40                   -- (shown at 60 % by Improved Forever: about 24)
@@ -172,6 +175,16 @@ local function PlaceSpoken(event)
 			if q >= 1 then self:SetScript("OnUpdate", nil) end
 		end
 	end)
+end
+-- Is a subtitle shown? (read by the gamepad bar's fade, DeckForever.lua: quieter under one.) Over the gamepad
+-- bar, as it's woken out of a fight under the character: Spoken's LOW put up to HIGH
+function ns.SpokenSubtitleShown()
+	local env = rawget(_G, "SpokenEnv")
+	local subtitle = env and rawget(env, "Subtitle")
+	local frame = subtitle and subtitle.frame
+	if not frame then return false end
+	if frame:GetFrameStrata() ~= "HIGH" then frame:SetFrameStrata("HIGH") end
+	return frame:IsShown() and frame:GetAlpha() > 0.05
 end
 local spokenWatch = CreateFrame("Frame")
 for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do

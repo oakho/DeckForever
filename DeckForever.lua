@@ -426,7 +426,8 @@ local FADED = {
 --     AWAKE_TIME after LT, RT or the d-pad is pressed ("awake", set below: our own
 --     handler's attribute, which addon code may set out of combat). Hidden, it still works: the first
 --     press both acts and shows it. After a fight it fades out at once: AishCore's out-of-combat
---     circles come in by the character then, over the bar's top.
+--     circles come in by the character then, over the bar's top. Under a subtitle of Spoken's it's woken
+--     to CALM_ALPHA only.
 local AWAKE_TIME = 5
 local CALM_FRAMES = { { "PlayerFrame", CALM_ALPHA }, { "GamepadMainActionBarFrame", 0, true } }
 local calmDriver
@@ -531,6 +532,8 @@ do
 		if Pressed(elapsed) then Wake() end
 		local now = GetTime()
 		local goal = now < awakeUntil and 1 or 0
+		-- (quieter under a subtitle of Spoken's, which stands under the character then: Readability.lua)
+		if goal > CALM_ALPHA and ns.SpokenSubtitleShown and ns.SpokenSubtitleShown() then goal = CALM_ALPHA end
 		if goal ~= fadeGoal then fadeGoal, fromLevel, fadeStart = goal, level, now end
 		if level == goal then return end
 		local p = (now - fadeStart) / (goal == 1 and AWAKE_IN or AWAKE_OUT)

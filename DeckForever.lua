@@ -37,7 +37,7 @@ local AURA_LEFT = EnumValue(Enum.AuraFrameIconDirection, "Left", 0)
 local AURA_DOWN = EnumValue(Enum.AuraFrameIconWrap, "Down", 0)
 local AURAS_A_ROW = 5           -- icons a row (Edit Mode's value is the count): 170 of the header's
                                 -- half, the middle left clear over its diamond
-local BUFFS_OPACITY = 50 - 50   -- the buffs 50 % opaque, quieter than the debuffs (Edit Mode's value: steps
+local AURAS_OPACITY = 50 - 50   -- the buffs and debuffs 50 % opaque (Edit Mode's value: steps
                                 -- over the slider's least, 50 %)
 local BUFFS_BUTTON = 15          -- the buffs' collapse button, at their frame's outer end (hidden: its room kept)
 local LAYOUT = {
@@ -100,9 +100,10 @@ local LAYOUT = {
 	-- AURAS_A_ROW icons a row; more rows under. (Their icons sit 1 above the frame)
 	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOP", x = HEADER + BUFFS_BUTTON, y = -(M + 1),
 		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_LEFT, IconWrap = AURA_DOWN, IconLimitBuffFrame = AURAS_A_ROW,
-			Opacity = BUFFS_OPACITY } },
+			Opacity = AURAS_OPACITY } },
 	{ system = "AuraFrame", index = 2, point = "TOPLEFT", relativePoint = "TOP", x = -HEADER, y = -(M + 1),
-		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_RIGHT, IconWrap = AURA_DOWN, IconLimitDebuffFrame = AURAS_A_ROW } },
+		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_RIGHT, IconWrap = AURA_DOWN, IconLimitDebuffFrame = AURAS_A_ROW,
+			Opacity = AURAS_OPACITY } },
 	-- the game's menu and bags (hidden by the gamepad UI) out of the way, bottom-right
 	{ system = "MicroMenu", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = B },
 }

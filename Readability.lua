@@ -118,8 +118,8 @@ f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(Le
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
 -- Spoken's subtitles by the character (see the top)
-local CALM_TOP = 0.256                 -- (out of a fight, up from the bottom: M under the resource badge,
-                                       -- 213 up on the Deck's 800: tools/deckprofile/placements.lua)
+local CALM_TOP = 0.246                 -- (out of a fight, up from the bottom: M under the resource badge,
+                                       -- 205 up on the Deck's 800: tools/deckprofile/placements.lua)
 local function SpokenTop()
 	if InCombatLockdown() or UnitAffectingCombat("player") then
 		local errors = _G.UIErrorsFrame

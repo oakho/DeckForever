@@ -506,11 +506,14 @@ local function Pressed(elapsed)
 	end
 	return false
 end
-local AWAKE_IN, AWAKE_OUT = 0.2, 0.6     -- (up quick, as it's pressed; down gently)
+local AWAKE_IN, AWAKE_OUT = 0.2, 0.8     -- (up quick, as it's pressed; down gently)
 local awakeUntil = 0
 local level, fromLevel, fadeStart, fadeGoal = 0, 0, 0, 0
 local function EaseOut(p) return p >= 1 and 1 or 1 - (1 - p) ^ 3 end
-local function Smooth(p) return p >= 1 and 1 or 0.5 - 0.5 * math.cos(math.pi * p) end
+local function Smooth(p)                  -- (cubic, slow at both ends)
+	if p >= 1 then return 1 end
+	return p < 0.5 and 4 * p ^ 3 or 1 - (-2 * p + 2) ^ 3 / 2
+end
 local function SetLevel(value)
 	level = value
 	if calmDriver and not InCombatLockdown() then

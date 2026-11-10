@@ -41,14 +41,18 @@ DeckPlacements = function(A, E, live, C)
 	bars.pet.layout, bars.pet.mirrorOf, bars.pet.relX, bars.pet.relY, bars.pet.width = "parent", "player", 0, -30, 140
 	local tot = bars.targettarget
 	tot.layout, tot.mirrorOf, tot.relX, tot.relY, tot.width = "parent", "target", 0, -30, 140
-	-- The out-of-combat circles by the character (at the default zoom: 44 % across, its knees at 41 % up):
-	-- health and resource on its left, well fed on its right. Fractions of the screen from the bottom left.
-	-- (AishCore's own followPlayer setting is read by nothing.)
+	-- The out-of-combat circles floating by the character, as near as they go without touching it (Game
+	-- Mode, default zoom: it stands 44 % across, about 22 wide either side, its knees at 41 % up; on the
+	-- Deck's screen, 1333 x 800). The resource circle (32) by its left side at its waist, the health circle
+	-- (54) down-left of it, diagonal as AishUI has them, M between them; well fed (60) by its right side.
+	-- Fractions of the screen from the bottom left. (AishCore's own followPlayer setting is read by nothing.)
 	local h, r, w = A.healthCircle, A.outOfCombatResourceCircle, A.wellFedCircle
-	-- the health circle down-left of the resource one, as AishUI has them (they overlapped at 0.394, 0.41)
-	h.anchorPctX, h.anchorPctY, h.x, h.y = 0.4006 - 0.0718, 0.3925 - 0.0686, 0, 0
-	r.anchorPctX, r.anchorPctY, r.x, r.y = 0.4006, 0.3925, 0, 0
-	w.anchorPctX, w.anchorPctY, w.x, w.y = 0.488, 0.41, 0, 0
+	local SW, SH, CX_PCT, BODY = 1333, 800, 0.44, 22
+	local rx, ry = CX_PCT * SW - BODY - M - 16, 0.45 * SH
+	local d = (16 + M + 27) / math.sqrt(2)        -- (centre to centre, 45 degrees)
+	r.anchorPctX, r.anchorPctY, r.x, r.y = rx / SW, ry / SH, 0, 0
+	h.anchorPctX, h.anchorPctY, h.x, h.y = (rx - d) / SW, (ry - d) / SH, 0, 0
+	w.anchorPctX, w.anchorPctY, w.x, w.y = (CX_PCT * SW + BODY + M + 30) / SW, 0.41, 0, 0
 	-- not on the Deck: the consumables (dynamic bar 2), the zone's name (wider than the minimap it sat
 	-- over: EllesmereUI's minimap shows it instead, inside), the auto turn-in box (top left)
 	local consumables = A.extraBars and A.extraBars.bars and A.extraBars.bars[2]

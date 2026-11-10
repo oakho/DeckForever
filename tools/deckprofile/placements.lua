@@ -13,8 +13,6 @@ DeckPlacements = function(A, E, live, C)
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
 	local MAP_RIM = 2          -- its border, drawn that far outside its frame on the right (measured: the
 	                           -- frame M from the edge left the border 6 px from it, the quests' at 8)
-	local QUESTS = 210         -- the quests as drawn (narrowed to the minimap: 202, + their quest dots and
-	                           -- header art, 8 left of that)
 
 	------------------------------------------------------------------ AishCore
 	-- The combat block centred on the screen, below and right of the character (DeckForever's camera puts
@@ -89,19 +87,13 @@ DeckPlacements = function(A, E, live, C)
 	for _, bar in pairs(dataBars or {}) do
 		if OFF[bar.name] then bar.visibility = "never" end
 	end
-	-- the debuffs filled from their right end, as the buffs (from the left, the first one sat mid-screen:
-	-- their frame is 12 icons wide), new rows under (not off the screen's top)
+	-- the player's buffs and debuffs: the game's (placed by DeckForever's Edit Mode layout), not these, which
+	-- hide the game's: the gamepad's "Améliorations" (LB / RB / Y) only goes through the game's
 	local uf = E.addons.EllesmereUIUnitFrames
-	local debuffs = uf and uf.playerAuraBars and uf.playerAuraBars.defaultDebuffs
-	if debuffs then debuffs.growDirection, debuffs.iconWrapDirection = "LEFT", "DOWN" end
+	if uf and uf.playerAuraBars then uf.playerAuraBars.enabled = false end
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -(M + MAP_RIM), offsetY = 0,
 			edge = { key = "SCREEN_BOTTOM", side = "TOP", offset = B } }
-		-- the buffs top right, left of the quests; the debuffs under them
-		anchors.PAB_Buffs = { side = "BOTTOM", target = "SCREEN_TOP", offsetX = 0, offsetY = -M,
-			edge = { key = "SCREEN_RIGHT", side = "LEFT", offset = -(M + QUESTS + M) } }
-		anchors.PAB_Debuffs = { side = "BOTTOM", target = "SCREEN_TOP", offsetX = 0, offsetY = -(M + 60 + M),
-			edge = { key = "SCREEN_RIGHT", side = "LEFT", offset = -(M + QUESTS + M) } }
 	end
 
 	------------------------------------------------------------------ Chattynator

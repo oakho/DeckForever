@@ -28,6 +28,17 @@ local OLD_LAYOUTS = { ["SteamDeck B"] = true }  -- earlier names of ours, remove
 local _, ns = ...
 local M = 8                                     -- the gap to the screen's edges and between neighbours
 local B = M + 4                 -- from the bottom edge: over the XP bar (XPBar, 4 px)
+local HEADER = 260              -- Improved Forever's target header: its line, that far either side of the
+                                -- top's centre (ImprovedForever_Immersion HeaderSlot.lua, RULE_W)
+local function EnumValue(enum, key, fallback) return enum and enum[key] or fallback end
+local AURA_HORIZONTAL = EnumValue(Enum.AuraFrameOrientation, "Horizontal", 0)
+local AURA_RIGHT = EnumValue(Enum.AuraFrameIconDirection, "Right", 1)
+local AURA_LEFT = EnumValue(Enum.AuraFrameIconDirection, "Left", 0)
+local AURA_DOWN = EnumValue(Enum.AuraFrameIconWrap, "Down", 0)
+local AURAS_A_ROW = 5           -- icons a row (Edit Mode's value is the count): what fits between the
+                                -- header and the quests on the Deck's screen (172)
+local AURAS_SPAN = AURAS_A_ROW * 30 + (AURAS_A_ROW - 1) * 5   -- (icons 30, 5 apart: the game's defaults)
+local BUFFS_BUTTON = 15          -- the buffs' collapse button, at their frame's outer end (hidden: its room kept)
 local LAYOUT = {
 	-- bottom up: the XP bar on the edge; Easy Controller's L3 / R3 (they hang 54 under the main bar)
 	-- just above it; the main bar (compact) with L5 / R5 either side
@@ -81,9 +92,15 @@ local LAYOUT = {
 	-- (the tracker's contents narrowed to the minimap's width, NarrowQuests: moved right by what's taken off)
 	{ system = "ObjectiveTracker", point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 1) + (261 - 202), y = -M,
 		settings = { Height = 0 } },
-	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 261 + M), y = -(M + 1) },   -- (its icons sit 1 above it)
-	-- (the buffs take up to three rows when there are many: the debuffs under them)
-	{ system = "AuraFrame", index = 2, point = "TOPRIGHT", relativePoint = "TOPRIGHT", x = -(M + 261 + M + 1), y = -150 },
+	-- the game's buffs and debuffs (the gamepad's "Améliorations", LB / RB / Y, goes through these: not
+	-- EllesmereUI's, turned off on the Deck profile) at the top either side of Improved Forever's target
+	-- header (its line, HEADER either side of the top's centre), growing towards it from their outer end:
+	-- AURAS_A_ROW icons a row (AURAS_SPAN across), the last one M from the header; more rows under.
+	-- (Their icons sit 1 above the frame)
+	{ system = "AuraFrame", index = 1, point = "TOPRIGHT", relativePoint = "TOP", x = HEADER + M + AURAS_SPAN + BUFFS_BUTTON, y = -(M + 1),
+		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_LEFT, IconWrap = AURA_DOWN, IconLimitBuffFrame = AURAS_A_ROW } },
+	{ system = "AuraFrame", index = 2, point = "TOPLEFT", relativePoint = "TOP", x = -(HEADER + M + AURAS_SPAN), y = -(M + 1),
+		settings = { Orientation = AURA_HORIZONTAL, IconDirection = AURA_RIGHT, IconWrap = AURA_DOWN, IconLimitDebuffFrame = AURAS_A_ROW } },
 	-- the game's menu and bags (hidden by the gamepad UI) out of the way, bottom-right
 	{ system = "MicroMenu", point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -M, y = B },
 }

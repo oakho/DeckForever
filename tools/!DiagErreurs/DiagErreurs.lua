@@ -20,7 +20,10 @@ f:RegisterEvent("ADDON_ACTION_FORBIDDEN")
 f:SetScript("OnEvent", function(_, event, addon, func)
 	if event == "ADDON_LOADED" then
 		-- (the saved table of the last session is loaded by now: this session's replaces it)
-		if addon == "!DiagErreurs" then DiagErreursDB = db end
+		if addon == "!DiagErreurs" then
+			db.workUntil = type(DiagErreursDB) == "table" and DiagErreursDB.workUntil or nil  -- (the work session, kept)
+			DiagErreursDB = db
+		end
 		return
 	end
 	local key = event .. " " .. tostring(addon) .. " " .. tostring(func)
@@ -560,5 +563,138 @@ do
       b:SetScript("OnClick", function() local ok, err = pcall(fn) if not ok then print("dgx key:", err) end end)
       SetOverrideBindingClick(owner, true, "CTRL-SHIFT-" .. key, name)   -- (plain F9-F12: Easy Controller's trackpad)
     end
+  end)
+end
+
+-- pads: what the game sees of the gamepads, 10 min from each login / reload: devices, and every change of the
+-- pressed buttons / pushed sticks (db.pads)
+do
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  f:SetScript("OnEvent", function()
+    local log = {}
+    db.pads = log
+    local function add(s) if #log < 400 then log[#log + 1] = date("%H:%M:%S ") .. s end end
+    local ids = C_GamePad and C_GamePad.GetAllDeviceIDs and C_GamePad.GetAllDeviceIDs() or {}
+    add("enabled=" .. tostring(C_GamePad and C_GamePad.IsEnabled and C_GamePad.IsEnabled()) .. " cvar=" .. tostring(GetCVar("GamePadEnable"))
+      .. " active=" .. tostring(C_GamePad and C_GamePad.GetActiveDeviceID and C_GamePad.GetActiveDeviceID()) .. " ids=" .. table.concat(ids, ","))
+    for _, id in ipairs(ids) do
+      local ok, raw = pcall(C_GamePad.GetDeviceRawState, id)
+      add("device " .. id .. " " .. tostring(ok and raw and (raw.name .. " vid=" .. tostring(raw.vendorID) .. " pid=" .. tostring(raw.productID)) or raw))
+    end
+    local last, t0 = "", GetTime()
+    local ticker
+    ticker = C_Timer.NewTicker(0.1, function()
+      if GetTime() - t0 > 600 then ticker:Cancel() add("end") return end
+      local st = C_GamePad.GetDeviceMappedState()
+      local s = {}
+      if st then
+        for i, b in ipairs(st.buttons or {}) do if b then s[#s + 1] = "b" .. i end end
+        for i, a in ipairs(st.axes or {}) do if math.abs(a) > 0.5 then s[#s + 1] = ("a%d=%.1f"):format(i, a) end end
+      else s[1] = "nostate" end
+      for _, id in ipairs(C_GamePad.GetAllDeviceIDs() or {}) do
+        local ok, raw = pcall(C_GamePad.GetDeviceRawState, id)
+        if ok and raw then
+          for i, b in ipairs(raw.rawButtons or {}) do if b then s[#s + 1] = "raw" .. id .. ":b" .. i end end
+          for i, a in ipairs(raw.rawAxes or {}) do if math.abs(a) > 0.5 then s[#s + 1] = ("raw%d:a%d=%.1f"):format(id, i, a) end end
+        end
+      end
+      local k = table.concat(s, " ")
+      if k ~= last then last = k add("[" .. k .. "] active=" .. tostring(C_GamePad.GetActiveDeviceID())) end
+    end)
+  end)
+end
+
+-- Work session (Claude's testing): CTRL-SHIFT-END (CTRL-ALT-Fn and ALT-SHIFT-F12 are the system's) turns it on or off, then reloads. While on (6 h at most, then off
+-- by itself): a "Capture" macro (the game's own screenshot, Screenshots folder) on LT + Easy Controller's paddle 3
+-- (TR3, F11). Off: the binding taken away again (only if it's still ours); the macro is left, unbound.
+do
+  local SESSION_MAX = 6 * 3600
+  local KEY, BIND, ACTION = "CTRL-SHIFT-END", "TR3:LT", "macro:Capture"
+  local function On() return db.workUntil and time() < db.workUntil end
+  local function Mapping()
+    local ec = rawget(_G, "ControllerKeyboard")
+    local m = ec and ec.db and ec.db.settings and ec.db.settings.mapping
+    return type(m) == "table" and m or nil
+  end
+  local function Apply()
+    if InCombatLockdown() then return end
+    if not On() then db.workUntil = nil end
+    local m = Mapping()
+    if On() then
+      if CreateMacro and GetMacroIndexByName("Capture") == 0 and GetNumMacros() < (MAX_ACCOUNT_MACROS or 120) then
+        CreateMacro("Capture", "INV_Misc_Spyglass_03", "/run Screenshot()")
+      end
+      if m and m[BIND] == nil then m[BIND] = ACTION end
+    elseif m and m[BIND] == ACTION then
+      m[BIND] = nil
+    end
+  end
+  local b = CreateFrame("Button", "DiagWorkSessionKey", UIParent)
+  b:SetScript("OnClick", function()
+    if InCombatLockdown() then return end
+    db.workUntil = (not On()) and (time() + SESSION_MAX) or nil
+    Apply()
+    ReloadUI()
+  end)
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  f:SetScript("OnEvent", function()
+    C_Timer.After(1, function()
+      Apply()
+      if not InCombatLockdown() then SetOverrideBindingClick(b, true, KEY, "DiagWorkSessionKey") end
+      if On() then print("|cff66ccffDiag|r : session de travail, capture = LT + palette 3") end
+    end)
+  end)
+end
+
+-- merchant: at each vendor, the fonts of its window's first items and of the vendor's nameplate (db.merchant)
+do
+  local function fontInfo(fs, label, out)
+    local ok, file, size, flags = pcall(fs.GetFont, fs)
+    local okT, text = pcall(fs.GetText, fs)
+    local p = { pcall(fs.GetPoint, fs, 1) }
+    local rel = p[3] and (type(p[3]) == "table" and (p[3].GetName and p[3]:GetName() or "?") or tostring(p[3])) or ""
+    out[#out + 1] = string.format("%s | %s | %s %s %s | eff %.3f | shown %s | pt %s %s %s %s %s | h %.1f",
+      label, okT and tostring(text) or "?", tostring(file), tostring(size), tostring(flags), fs:GetEffectiveScale(),
+      tostring(fs:IsShown()), tostring(p[2]), rel, tostring(p[4]), tostring(p[5]), tostring(p[6]), fs:GetStringHeight() or 0)
+  end
+  local function walk(frame, label, out, depth)
+    if not frame or depth > 6 or not pcall(function() assert(not frame:IsForbidden()) end) then return end
+    for _, r in ipairs({ frame:GetRegions() }) do
+      pcall(function() if r:GetObjectType() == "FontString" and r:IsShown() then fontInfo(r, label .. ">" .. (r:GetName() or "fs"), out) end end)
+    end
+    for _, c in ipairs({ frame:GetChildren() }) do walk(c, label .. ">" .. (c:GetName() or "?"), out, depth + 1) end
+  end
+  -- (MERCHANT_SHOW doesn't come on this client, nor is MerchantFrame the window: the interaction's event, then
+  -- one scan for the shown frames named *Merchant*)
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+  f:SetScript("OnEvent", function(_, _, kind)
+    db.inter = db.inter or {} table.insert(db.inter, date("%H:%M:%S ") .. tostring(kind))
+    if kind ~= 5 then return end  -- (Merchant; the Enum's name may differ here)
+    db.merchant = { "seen " .. date("%H:%M:%S") }
+    C_Timer.After(0.5, function() local ok, err = pcall(function()
+      local out = { date("%H:%M:%S") .. " ui scale " .. UIParent:GetEffectiveScale() .. " merchant scale " .. (MerchantFrame and MerchantFrame:GetEffectiveScale() or 0) }
+      local fr = EnumerateFrames()
+      while fr do
+        pcall(function()   -- (some frames' state is a secret value here: skipped)
+          if not fr:IsForbidden() and fr:IsVisible() then
+            local n = fr:GetName()
+            if n and n:find("Merchant") and not n:find("Item%d+.") then out[#out + 1] = "frame " .. n .. " scale " .. fr:GetEffectiveScale() end
+          end
+        end)
+        fr = EnumerateFrames(fr)
+      end
+      for i = 1, 2 do
+        local b = _G["MerchantItem" .. i]
+        if b then walk(b, "item" .. i, out, 0) end
+      end
+      local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit("npc")
+      out[#out + 1] = "plate " .. tostring(plate and plate:GetName())
+      if plate then walk(plate, "plate", out, 0) end
+      db.merchant = out
+      print("dgx merchant: " .. #out)
+    end) if not ok then db.merchant = { "error " .. tostring(err) } print("dgx merchant error") end    end)
   end)
 end

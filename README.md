@@ -62,8 +62,10 @@ Nothing to type on a new character: at each login DeckForever puts the Deck's in
   (`Placements.lua`) applied to them. AishUI's setup per character is kept quiet: it no longer puts
   its own layout in use, and no longer asks for a role (its answer switched EllesmereUI's profile
   for the whole account).
-- On a character's first login: its addons on or off as the Deck's, Spoken's subtitles, Easy
-  Controller's consumables wheel and *Quêtes* macro, GlowingBars' and Lueur's settings.
+- On a character's first login: its addons on or off as the Deck's, Spoken's subtitles, GlowingBars'
+  and Lueur's settings.
+- At every login, Easy Controller's bindings a character lacks: the consumables wheel and the *Quêtes*
+  macro.
 
 When that changed what's on screen, a strip at the top asks for a reload: A reloads, B leaves it
 for later. (A game popup or an automatic reload can't be used: the first taints the gamepad UI,

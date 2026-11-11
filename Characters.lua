@@ -15,8 +15,9 @@
 -- At a character's first login with DeckForever (DeckForeverDB.chars, by GUID), once:
 --   * its addons on or off as the Deck's (ADDONS_OFF off, the others on);
 --   * Spoken's subtitles (its window style, per character: DialogueUI's window by default);
---   * Easy Controller's wheel bindings (per character): the consumables wheel, the "Quêtes" macro;
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
+-- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
+-- (paddle 4), the "Quêtes" macro (LT + paddle 4).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
 
@@ -165,6 +166,17 @@ local function PlatynatorProfile()
 	local prof = profiles and profiles.AishUI
 	if not prof then return end
 	if prof.designs and prof.designs["AishUI - DPS"] then prof.style = "AishUI - DPS" end
+	-- the friendly NPCs' names as the players': Platynator's ("AishUI - Friendly": Friz-like, shadowed), not
+	-- the game's own (tiny, flat) it leaves them when their nameplates are off
+	prof.show_nameplates = prof.show_nameplates or {}
+	prof.show_nameplates.friendlyNPC = true
+	-- the line under the name (an NPC's title, a player's guild) hung by its top just under the name, so a
+	-- long one wraps downward: AishUI hangs it by its bottom, 8 under the name's, and a two-line title
+	-- ("Échange des bons de la foire de Sombrelune") rose over the name
+	local friendly = prof.designs and prof.designs["AishUI - Friendly"]
+	for _, text in ipairs(friendly and friendly.texts or {}) do
+		if text.kind == "guild" then text.anchor = { "TOP", 0, 5 } end
+	end
 	PLATYNATOR_CURRENT_PROFILE = "AishUI"
 end
 
@@ -265,7 +277,7 @@ local function NewCharacter()
 	if not guid then return end
 	DeckForeverDB.chars = DeckForeverDB.chars or {}
 	if DeckForeverDB.chars[guid] then return end
-	for _, step in ipairs({ function() Addons(guid) end, Spoken, EasyController, CharacterSettings }) do
+	for _, step in ipairs({ function() Addons(guid) end, Spoken, CharacterSettings }) do
 		local ok, err = pcall(step)
 		if not ok then Print(tostring(err)) end
 	end
@@ -277,7 +289,8 @@ end
 local function Run()
 	if InCombatLockdown() then return false end
 	if DeckForeverDB.testStrip then DeckForeverDB.testStrip = nil ns.NeedReload("test") end
-	for _, step in ipairs({ Profiles, Placements, NewCharacter }) do
+	-- (Easy Controller's bindings at each login, only the ones a character lacks: new ones reach every character)
+	for _, step in ipairs({ Profiles, Placements, EasyController, NewCharacter }) do
 		local ok, err = pcall(step)
 		if not ok then Print(tostring(err)) end
 	end

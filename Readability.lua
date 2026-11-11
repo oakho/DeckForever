@@ -22,6 +22,9 @@
 --     out, slowly, then slide in fading in at their new place. Drawn over the gamepad bar, which is
 --     quieter under them (DeckForever.lua, its fade). Only while not dragged: a place of the player's (Spoken's Layout().Subtitle without our mark)
 --     is left as it is.
+--   * the vendor's items (the game's MerchantFrame, skinned by EllesmereUI): their names in PT Sans Narrow at
+--     10 (about 9.6 px on the Deck), a blur. Same font, at MERCHANT_SIZE, with a light shadow, set as the
+--     window opens (the interaction's event: MERCHANT_SHOW doesn't come on this client)
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -191,3 +194,25 @@ for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAY
 	spokenWatch:RegisterEvent(event)
 end
 spokenWatch:SetScript("OnEvent", function(_, event) pcall(PlaceSpoken, event) end)
+
+-- The vendor's item names (see the top)
+local MERCHANT_SIZE = 13          -- (12: still too small for the user; a long name is cut after its second line, whole in the tooltip)
+local function MerchantNames()
+	for i = 1, (MERCHANT_ITEMS_PER_PAGE or 12) do
+		local fs = _G["MerchantItem" .. i .. "Name"]
+		if fs and not fs:IsForbidden() then
+			local file, size, flags = fs:GetFont()
+			if file and size ~= MERCHANT_SIZE then
+				fs:SetFont(file, MERCHANT_SIZE, flags or "")
+				fs:SetShadowOffset(1, -1)
+				fs:SetShadowColor(0, 0, 0, 0.8)
+			end
+		end
+	end
+end
+local merchantWatch = CreateFrame("Frame")
+merchantWatch:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+merchantWatch:SetScript("OnEvent", function(_, _, kind)
+	if kind ~= 5 then return end        -- (Enum.PlayerInteractionType.Merchant)
+	for _, delay in ipairs({ 0, 0.3 }) do C_Timer.After(delay, function() pcall(MerchantNames) end) end
+end)

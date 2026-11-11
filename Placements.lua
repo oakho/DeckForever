@@ -89,6 +89,8 @@ DeckPlacements = function(A, E, live, C, W)
 	-- the level badge at AishUI's size (DeckForever fills the corner under it: Readability.lua)
 	local badge = A.xpBar and A.xpBar.levelBg
 	if badge then badge.x, badge.y, badge.w, badge.h = -20.2, -6.5, 87, 54 end
+	-- AishCore's level up toast: Improved Forever's banner says it (LevelBanner), where they'd overlap
+	if A.xpBar then A.xpBar.toastEnabled = false end
 	-- AishCore's menu bar and addons list, bottom right under the mouse: for a mouse, not the gamepad
 	if A.menuBar then A.menuBar.enabled = false end
 	if A.addonCompartment then A.addonCompartment.enabled = false end

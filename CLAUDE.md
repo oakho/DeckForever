@@ -41,6 +41,9 @@ breaks the loop). So:
   override bindings on PAD1/PAD2 lose to Easy Controller's: to take A/B, a frame's own
   `OnGamePadButtonDown` (`EnableGamePadButton`, `SetPropagateGamePadInput` per button).
 - New .lua files in the .toc load only after the client restarts, not at a `/reload`.
+- `MERCHANT_SHOW` doesn't fire on this client: watch `PLAYER_INTERACTION_MANAGER_FRAME_SHOW` (5 = merchant).
+- Some frames' `IsVisible`/`IsShown` return secret booleans: a boolean test on one errors and taints;
+  in a scan over `EnumerateFrames`, wrap each frame's test in `pcall`.
 - Edit Mode settings that exist in `Enum` may do nothing in this client (StatusTrackingBar
   Width/Height): measure before relying on one.
 
@@ -61,6 +64,13 @@ WoW runs in Desktop Mode under Proton; drive it with `xdotool` (window "World of
 - Keyboard is AZERTY: `xdotool type` mangles q/a/z/w/m; avoid them in typed commands.
 - Easy Controller's on-screen keyboard opens with the chat: close it with its X (click 1070,358).
 - Never press Escape blindly (opens the game menu). Never click the forbidden-action popup.
+- Dev keys only from `!DiagErreurs` (CTRL-SHIFT-F1..F12, CTRL-SHIFT-END = work session); check
+  `~/.config/kglobalshortcutsrc` before sending any other combo: CTRL-ALT-Fn switches the console, and
+  ALT-SHIFT-F12 (KDE's "suspend compositing"), sent during a reload, froze the Deck's screen (reboot).
+- Work session (CTRL-SHIFT-END, 6 h max): LT + paddle 3 runs a "Capture" macro (the game's own
+  screenshot, in `_forever_/Screenshots`). Turn it off at the end.
+- Desktop Mode: Steam applies its Desktop controller config to WoW (A = Enter...): the `wow-pad-focus`
+  user service forces the Battle.net config while WoW has the focus.
 - Don't use a virtual uinput pad: it made the game drop the Deck's controller.
 
 ## Git

@@ -474,13 +474,29 @@ end
 
 -- What wakes the bar. This client's gamepad bar takes the gamepad's buttons itself (no key bindings: the
 -- d-pad and A / B / X / Y are bound to nothing), so the bar's own state is read, measured on it:
---   * LT / RT held: it shows its left / right page (…LeftCenteredAnchorLeftBar, …RightCenteredAnchorRightBar)
+--   * LT / RT held: it shows its left / right page (…LeftCenteredAnchorLeftBar, …RightCenteredAnchorRightBar),
+--     both its bottom one; and the triggers are read themselves (TriggerHeld)
 --   * the d-pad: its main page's buttons 1 to 4 show pushed (5 to 8 are A / B / X / Y: they don't wake it,
 --     nor does LB, the allies' targeting page)
 -- None of it while a window, a menu or a text box has the focus (ElsewhereFocus).
 -- Read 10 times a second, out of combat: only getters, nothing hooked, nothing set on Blizzard's frames.
 local PAGE = "GamepadMainActionBarFramePageUnit"
-local WAKE_PAGES = { PAGE .. "LeftCenteredAnchorLeftBar", PAGE .. "RightCenteredAnchorRightBar" }
+local WAKE_PAGES = { PAGE .. "LeftCenteredAnchorLeftBar", PAGE .. "RightCenteredAnchorRightBar",
+	PAGE .. "BottomCenteredAnchorBottomBar" }
+-- The triggers themselves, read too: a trigger that's a modifier (Easy Controller makes RT one, Alt or
+-- Ctrl, for its paddle layers) may not turn the bar's page, and LT + RT shows the bottom page
+local TRIGGERS = { "PADLTRIGGER", "PADRTRIGGER" }
+local EMULATED = { GamePadEmulateShift = IsShiftKeyDown, GamePadEmulateCtrl = IsControlKeyDown,
+	GamePadEmulateAlt = IsAltKeyDown }
+local function TriggerHeld()
+	for _, key in ipairs(TRIGGERS) do
+		if IsKeyDown and IsKeyDown(key) then return true end
+		for cvar, down in pairs(EMULATED) do
+			if down and GetCVar(cvar) == key and down() then return true end
+		end
+	end
+	return false
+end
 local DPAD_BUTTON = PAGE .. "TopCenteredAnchorTopBarActionButton"
 -- Not while the game's own focus is elsewhere: a window or menu open (the gamepad then drives a cursor:
 -- freelook off), the chat's line or any text box taking the keys, the game menu
@@ -500,6 +516,7 @@ local function Pressed(elapsed)
 	if padTick < 0.1 then return false end
 	padTick = 0
 	if ElsewhereFocus() then return false end
+	if TriggerHeld() then return true end
 	for _, name in ipairs(WAKE_PAGES) do
 		local bar = _G[name]
 		if bar and bar:IsShown() then return true end

@@ -8,6 +8,12 @@ User-facing strings are French; code and comments are English.
   (minimap, chat, tooltip, quests, class action), the fader (combat mode, `FADED`), the secure state
   driver (`CalmDriver`), the XP bar, fonts.
 - `Legend.lua`: our gamepad help, redrawn from Blizzard's `GamepadPersistentInputLegend`.
+- `Characters.lua`: every character on the Deck's UI from its first login, no command: AishUI's
+  per-character setup kept quiet, the "Steam Deck" profiles back in use, `Placements.lua` applied,
+  a new character's addons and per-character settings; the reload strip (`ns.NeedReload`). Anything
+  new that lives per character, or that another addon changes for one, goes there.
+- `Placements.lua`: where AishUI's blocks go (AishCore, EllesmereUI, Chattynator, WaypointUI
+  profiles); run at each login, by `tools/deckprofile/build.lua` and by !DiagErreurs' F10.
 - `Waypoint.lua`: TomTom's arrow on the followed (or closest watched) quest; TomTom's own quest
   integration is retail-only (this client is WOW_PROJECT_ID 18).
 - `tools/`: dev only (not packaged): in-game test scripts and the `!DiagErreurs` diagnostics addon.
@@ -30,6 +36,11 @@ breaks the loop). So:
 - With a controller, Blizzard's gamepad code holds some CVars in a temporary layer over the saved
   value (`CameraKeepCharacterCentered` = 1, which cancels any camera shoulder offset): `SetCVar` then
   "works" but changes nothing; use `C_CVar.SetTempCVar` too, again when the controller comes back.
+- A game popup (`StaticPopup_Show`) from addon code taints the gamepad UI as it closes
+  (SetPreferredGamepadInteractTarget forbidden). `ReloadUI` only works from a button press, and
+  override bindings on PAD1/PAD2 lose to Easy Controller's: to take A/B, a frame's own
+  `OnGamePadButtonDown` (`EnableGamePadButton`, `SetPropagateGamePadInput` per button).
+- New .lua files in the .toc load only after the client restarts, not at a `/reload`.
 - Edit Mode settings that exist in `Enum` may do nothing in this client (StatusTrackingBar
   Width/Height): measure before relying on one.
 

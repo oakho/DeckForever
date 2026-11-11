@@ -1,13 +1,15 @@
 -- Where the Deck puts AishUI's blocks: DeckForever's layout of before AishUI (gamepad help top left, chat
 -- bottom left, the game's quests top right (placed by DeckForever), minimap bottom right, the combat block
 -- over the compact gamepad bar).
--- Absolute values, set on AishUI's "Steam Deck" profiles: build.lua runs this after scaling them,
--- !DiagErreurs' F10 runs it live (tools/deckprofile/dev-install.sh puts this file into it).
+-- Absolute values, set on AishUI's "Steam Deck" profiles (account-wide: every character): DeckForever
+-- runs this at each login (Characters.lua: a reload asked when it changed something),
+-- tools/deckprofile/build.lua after scaling the profiles from AishUI's, !DiagErreurs' F10 live.
+-- Plain Lua (build.lua runs it out of the game): nothing of the game's API.
 -- A = AishCore's profile, E = EllesmereUI's, live = EllesmereUIDB.unlockAnchors (the
 -- anchors EllesmereUI works with: the profile only keeps a copy, taken at a profile switch or an export),
--- C = Chattynator's profile.
+-- C = Chattynator's profile, W = WaypointUI's settings (WaypointDB_Global). Any of C, W may be nil.
 -- UIParent units (scale 0.96: Deck px).
-DeckPlacements = function(A, E, live, C)
+DeckPlacements = function(A, E, live, C, W)
 	local M = 8                -- the gap to the screen's edges, as everywhere in DeckForever
 	local B = M + 4            -- from the bottom: over the XP bar
 	local MAP = 203            -- EllesmereUI's minimap, square (measured)
@@ -141,5 +143,17 @@ DeckPlacements = function(A, E, live, C)
 		C.edit_box_position = "top"
 		C.keep_edit_box_visible = false
 		C.show_tabs_1 = "hover"
+	end
+
+	------------------------------------------------------------------ WaypointUI
+	-- the in-world waypoint of the followed quest: readable at the Deck's size (AishUI had it at 0.7, its
+	-- distance at 60 %); always as a waypoint (icon, beam, text under it: name and distance), never the
+	-- framed pinpoint, drawn over the place it points at
+	if W then
+		for k, v in pairs({ WaypointScale = 1, PinpointScale = 1, PinpointInfoExtended = false, WaypointSystemType = 2,
+			WaypointDistanceTextType = 1, NavigatorScale = 1.3, WaypointDistanceTextScale = 1.3,
+			WaypointDistanceTextAlpha = 1, NavigatorAlpha = 1, fontPath = "Fonts\\FRIZQT__.TTF" }) do
+			W[k] = v
+		end
 	end
 end

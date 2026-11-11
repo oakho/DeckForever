@@ -7,12 +7,12 @@
 -- AishUI is laid out for a big screen at UI scale 0.62; the Deck wants 0.96 (768 / 800 physical px).
 -- Every offset measured from the screen is first multiplied by K = 0.62 / 0.96, so each block keeps its
 -- place on screen while drawn 1.55 times bigger (offsets between two blocks stay: they grow with their
--- blocks). Then placements.lua puts the blocks where the Deck wants them. Rerun after an AishUI update:
+-- blocks). Then Placements.lua (the addon's) puts the blocks where the Deck wants them. Rerun after an AishUI update:
 -- its installer rewrites these SavedVariables; each profile is built again from AishUI's (_deckSource).
 local dir = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = dir .. "/?.lua;" .. package.path
 local sv = require("sv")
-dofile(dir .. "/placements.lua")
+dofile(dir .. "/../../Placements.lua")
 
 local SV = assert(arg[1], "usage: lua build.lua <SavedVariables dir>")
 local NAME = "Steam Deck"
@@ -88,15 +88,10 @@ local ct = open("Chattynator").CHATTYNATOR_CONFIG
 local C = ct and ct.Profiles and ct.Profiles.DEFAULT
 
 -------------------------------------------------------------------------------------------- WaypointUI
--- the in-world waypoint of the followed quest: readable at the Deck's size (AishUI had it at 0.7, its
--- distance at 60 %); always as a waypoint (icon, beam, text under it: name and distance), never the
--- framed pinpoint, drawn over the place it points at
 local wp = open("WaypointUI").WaypointDB_Global
-for k, v in pairs({ WaypointScale = 1, PinpointScale = 1, PinpointInfoExtended = false, WaypointSystemType = 2, WaypointDistanceTextType = 1, NavigatorScale = 1.3, WaypointDistanceTextScale = 1.3,
-    WaypointDistanceTextAlpha = 1, NavigatorAlpha = 1, fontPath = "Fonts\\FRIZQT__.TTF" }) do wp[k] = v end
 
 -------------------------------------------------------------------------------------------- the Deck
-DeckPlacements(A, E, db.unlockAnchors, C)
+DeckPlacements(A, E, db.unlockAnchors, C, wp)
 for _, f in ipairs(files) do sv.save(f.path, f.env, f.order) end
 print(("'%s' built and active: AishCore from '%s', EllesmereUI from '%s' (UI scale %s)")
 	:format(NAME, D._deckSource, db._deckSource, TO_SCALE))

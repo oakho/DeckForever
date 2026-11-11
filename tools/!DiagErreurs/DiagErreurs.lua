@@ -286,7 +286,7 @@ X.pv = function()
   if p:IsShown() and p:GetScale() < 0.1 then p:Hide(); p:SetScale(1) else p:Show(); p:SetScale(0.01) end
 end
 
--- deck: the Deck placements (tools/deckprofile/placements.lua, put ahead of this file by dev-install.sh)
+-- deck: the Deck placements (DeckForever's Placements.lua, as loaded)
 -- on the live "Steam Deck" profiles; WoW keeps them at the /reload
 X.deck = function()
   local A = AishaddonDB and AishaddonDB._profiles and AishaddonDB._profiles["Steam Deck"]
@@ -294,7 +294,7 @@ X.deck = function()
   if not (A and E and DeckPlacements) then print("dgx deck: a Steam Deck profile is missing (tools/deckprofile/build.lua)") return end
   EllesmereUIDB.unlockAnchors = EllesmereUIDB.unlockAnchors or {}
   local C = CHATTYNATOR_CONFIG and CHATTYNATOR_CONFIG.Profiles and CHATTYNATOR_CONFIG.Profiles.DEFAULT
-  DeckPlacements(A, E, EllesmereUIDB.unlockAnchors, C)
+  DeckPlacements(A, E, EllesmereUIDB.unlockAnchors, C, WaypointDB_Global)
   ReloadUI()
 end
 

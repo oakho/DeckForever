@@ -15,3 +15,5 @@ Waypoint.lua
 Camera.lua
 Readability.lua
 Gamepad.lua
+Placements.lua
+Characters.lua

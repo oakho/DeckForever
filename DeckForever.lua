@@ -844,6 +844,7 @@ local function Apply()
 	end
 	if not source then Print("aucune disposition de départ trouvée.") return end
 	DeckForeverDB.backup = DeckForeverDB.backup or CopyTable(saved)
+	if DeckForeverDB.back then DeckForeverDB.back[UnitGUID("player") or ""] = nil end
 	DeckForeverDB.previous = source.layoutName
 
 	local layout = CopyTable(source)
@@ -948,6 +949,9 @@ end
 
 local function Back()
 	if not EditModeReady() then return end
+	-- (this character stays off ours: not put back at its next login, Detect)
+	DeckForeverDB.back = DeckForeverDB.back or {}
+	DeckForeverDB.back[UnitGUID("player") or ""] = true
 	local layouts, _, gamepadPreset = Layouts()
 	local name = DeckForeverDB.previous or SOURCE_LAYOUT
 	local index = FindLayout(layouts, name)
@@ -970,6 +974,11 @@ SlashCmdList.DECKFOREVER = function(msg)
 		Print(forceFight and "aperçu combat : on (affichage seulement)." or "aperçu combat : off.")
 	elseif msg == "back" then
 		Back()
+	elseif msg == "test" then
+		-- (the reload strip, Characters.lua, at the next login or reload: as it shows for real, the chat
+		-- and Easy Controller's keyboard closed)
+		DeckForeverDB.testStrip = true
+		Print("bandeau de rechargement au prochain /reload.")
 	elseif msg == "camera" or msg == "vue" then
 		ns.CameraProfile(Print)
 	else
@@ -1002,6 +1011,7 @@ end
 -- (more addons, later): asked again every second until it has them, and whenever they change
 local DETECT_TRIES = 15
 local checked                   -- the layout checked once, at the first login of the session
+local autoPlaced                -- ours put in use by Detect, once a session
 local tries = 0
 local function Detect()
 	if not (C_EditMode and EditModePresetLayoutManager) then return end
@@ -1016,6 +1026,18 @@ local function Detect()
 	local was = oursActive
 	oursActive = layout.layoutName == TARGET_LAYOUT and layout.layoutType ~= Enum.EditModeLayoutType.Preset
 	if oursActive and not InCombatLockdown() then SetupOurs() end
+	-- Ours on every character (Characters.lua): a character on another layout (a new one: the game's
+	-- gamepad preset) is put on ours, saved first when the account has none, unless it went back with
+	-- /df back. Once a session; a reload asked
+	if not oursActive and not autoPlaced and not InCombatLockdown()
+		and not (DeckForeverDB.back and DeckForeverDB.back[UnitGUID("player") or ""]) then
+		autoPlaced = true
+		checked = true
+		local index = FindLayout(layouts, TARGET_LAYOUT)
+		if index then C_EditMode.SetActiveLayout(index) else Apply() end
+		if ns.NeedReload then ns.NeedReload("disposition") end
+		return
+	end
 	-- (once a session, the layouts known: a game bug drops elements from saved layouts at launch)
 	if not checked then
 		checked = true

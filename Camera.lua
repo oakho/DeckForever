@@ -42,9 +42,22 @@ end
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 for _, e in ipairs({ "GAME_PAD_ACTIVE_CHANGED", "GAME_PAD_CONNECTED" }) do pcall(f.RegisterEvent, f, e) end
-f:SetScript("OnEvent", function()
+-- ours on every character (DynamicCam's profile is per character: a new one is on "Default"), and
+-- made again from "Immersion" when the values above change: at each login, quietly
+local VERSION = table.concat({ PITCH_RAISE, CALM_RAISE, PITCH_MAX, FIGHT_IN, FIGHT_OUT, table.concat(FIGHTS, ",") }, "/")
+local function Ensure()
+	local DC = DynamicCam()
+	if not (DC and DC.db and DeckForeverDB) or InCombatLockdown() then return end
+	if not rawget(DC.db.profiles, SOURCE) then return end
+	if DC.db:GetCurrentProfile() == PROFILE and DeckForeverDB.camera == VERSION then return end
+	ns.CameraProfile(function() end)
+	DeckForeverDB.camera = VERSION
+end
+
+f:SetScript("OnEvent", function(_, event, login, reload)
 	-- (after the gamepad code has set its own layer)
 	if DynamicCam() then C_Timer.After(0.5, Uncentre) end
+	if event == "PLAYER_ENTERING_WORLD" and (login or reload) then C_Timer.After(2, function() pcall(Ensure) end) end
 end)
 
 function ns.CameraProfile(print)

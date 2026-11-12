@@ -698,3 +698,18 @@ do
     end) if not ok then db.merchant = { "error " .. tostring(err) } print("dgx merchant error") end    end)
   end)
 end
+
+-- supertrack: who changes the followed quest / waypoint (db.supertrack, 40 at most): the call and its stack
+do
+  local function log(what)
+    db.supertrack = db.supertrack or {}
+    if #db.supertrack >= 40 then return end
+    db.supertrack[#db.supertrack + 1] = date("%H:%M:%S ") .. what .. "\n" .. debugstack(3, 6, 0)
+  end
+  if C_SuperTrack then
+    for _, fn in ipairs({ "SetSuperTrackedQuestID", "SetSuperTrackedUserWaypoint", "ClearAllSuperTracked", "SetSuperTrackedMapPin" }) do
+      if C_SuperTrack[fn] then hooksecurefunc(C_SuperTrack, fn, function(...) log(fn .. " " .. tostring((...))) end) end
+    end
+  end
+  if C_Map and C_Map.SetUserWaypoint then hooksecurefunc(C_Map, "SetUserWaypoint", function() log("SetUserWaypoint") end) end
+end

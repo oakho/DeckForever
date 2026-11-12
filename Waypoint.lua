@@ -4,8 +4,8 @@
 -- changed when the quest or its place changes.
 --   * with WaypointUI (AishUI): given to it through its API (WaypointUIAPI.Navigation), flagged as ours;
 --     it shows it in the world. It makes it a map pin the game tracks, which ends the quest's super
---     tracking: the quest you picked is kept while our pin is what's tracked. A pin you set yourself is
---     never replaced, but by a quest you pick
+--     tracking: the quest you picked is kept while our pin is what's tracked. A pin you set yourself
+--     (WaypointUI's, or the game's map's: L3 on the gamepad map) is never replaced, but by a quest you pick
 --   * else TomTom's arrow (TomTom's own quest integration is retail-only), a waypoint you set yourself
 --     keeping the arrow
 --------------------------------------------------------------------------------
@@ -89,6 +89,21 @@ local function Clear()
 	ours, oursKey = nil, nil
 end
 
+-- The game's own waypoint (a pin set on the map: the gamepad map's L3, a click), when it isn't the one we
+-- put: WaypointUI tracks it at once, but not as its "user navigation", so it's read here. Ours is noted
+-- as the game has it right after we set it (WaypointUI may move it to a parent map), kept across reloads
+-- (DeckForeverDB.waypoint: the game keeps the waypoint)
+local function NativeWaypoint()
+	local wp = C_Map.HasUserWaypoint and C_Map.HasUserWaypoint() and C_Map.GetUserWaypoint()
+	return wp and wp.position and { map = wp.uiMapID, x = wp.position.x, y = wp.position.y } or nil
+end
+local function YourPin()
+	local wp = NativeWaypoint()
+	if not wp then return false end
+	local o = DeckForeverDB and DeckForeverDB.waypoint
+	return not (o and o.map == wp.map and math.abs(o.x - wp.x) < 0.001 and math.abs(o.y - wp.y) < 0.001)
+end
+
 local function Update()
 	local questID, mapID, x, y = Target()
 	if not questID then
@@ -104,9 +119,14 @@ local function Update()
 		-- a pin of yours (not ours) stays, but for a quest you just picked
 		local tracked = nav.IsUserNavigationTracked and nav.IsUserNavigationTracked()
 		if tracked and not OursTracked() and not picked then return end
+		-- (a pin you set on the game's map: the same)
+		if not picked and YourPin() then return end
 		local ok = pcall(nav.NewUserNavigation, { name = title, mapID = mapID, x = x * 100, y = y * 100,
 			flags = FLAG, suppressAudio = true, stripCoordinates = true })
-		if ok then ours, oursKey = true, key end
+		if ok then
+			ours, oursKey = true, key
+			DeckForeverDB.waypoint = NativeWaypoint()
+		end
 		return
 	end
 	if key == oursKey then return end

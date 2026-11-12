@@ -109,3 +109,17 @@ boxWatch:SetScript("OnUpdate", function(_, elapsed)
 	boxTick = 0
 	if holder or (_G.LootFrame and _G.LootFrame:IsShown()) then pcall(Box) end
 end)
+
+-- HereBeDragons-Pins loaded (by any addon: WaypointUI once an update has undone tools/patches, TomTom...):
+-- its world map data provider runs as the map opens and the controller stops answering. Said once a login,
+-- in the chat: tools/apply-patches.sh puts WaypointUI's patch back
+local pinsCheck = CreateFrame("Frame")
+pinsCheck:RegisterEvent("PLAYER_LOGIN")
+pinsCheck:SetScript("OnEvent", function()
+	C_Timer.After(5, function()
+		if LibStub and LibStub("HereBeDragons-Pins-2.0", true) then
+			print("|cff66ccffDeckForever|r : |cffff8040HereBeDragons-Pins est chargé|r (mise à jour de WaypointUI ?) : "
+				.. "la carte risque de bloquer la manette. Lance tools/apply-patches.sh.")
+		end
+	end)
+end)

@@ -1,0 +1,47 @@
+
+--- a/WaypointUI/Code/MapPinFrame/MapPinFrame.lua	2026-09-13 08:27:36.000000000 +0200
++++ b/WaypointUI/Code/MapPinFrame/MapPinFrame.lua	2026-11-12 01:04:24.944966752 +0100
+@@ -1135,8 +1135,10 @@
+     UpdateWaypointLocationPinVisibility()
+ end)
+ SavedVariables.OnChange("WaypointDB_Global", "ContextIconAppearance", RefreshVisiblePins)
+-EventRegistry:RegisterCallback("MapCanvas.MapSet", UpdateWaypointLocationPinVisibility)
+-EventRegistry:RegisterCallback("WorldMapOnShow", UpdateWaypointLocationPinVisibility)
++-- DeckForever: a frame later, out of the map's own code (see Navigation_DataProvider.lua)
++local function UpdateWaypointLocationPinVisibilityLater() C_Timer.After(0, UpdateWaypointLocationPinVisibility) end
++EventRegistry:RegisterCallback("MapCanvas.MapSet", UpdateWaypointLocationPinVisibilityLater)
++EventRegistry:RegisterCallback("WorldMapOnShow", UpdateWaypointLocationPinVisibilityLater)
+ 
+ local EL = CreateFrame("Frame")
+ EL:RegisterEvent("USER_WAYPOINT_UPDATED")
+
+--- a/WaypointUI/Code/Navigation/Navigation_DataProvider.lua	2026-09-13 08:27:36.000000000 +0200
++++ b/WaypointUI/Code/Navigation/Navigation_DataProvider.lua	2026-11-12 01:04:24.944512103 +0100
+@@ -779,10 +779,13 @@
+     end
+ end)
+ 
+-WorldMapFrame:RegisterCallback("WorldQuestsUpdate", Navigation_DataProvider.ApplyMapHandling)
+-EventRegistry:RegisterCallback("MapCanvas.MapSet", Navigation_DataProvider.ApplyMapHandling)
+-EventRegistry:RegisterCallback("WorldMapOnShow", Navigation_DataProvider.ApplyMapHandling)
+-EventRegistry:RegisterCallback("SuperTracking.OnChange", Navigation_DataProvider.ApplyMapHandling)
++-- DeckForever: run a frame later, out of the map's own code (run inside it, from its OnShow, it tainted the
++-- gamepad UI: SetPreferredGamepadInteractTarget, ClearTarget blocked)
++local function ApplyMapHandlingLater() C_Timer.After(0, Navigation_DataProvider.ApplyMapHandling) end
++WorldMapFrame:RegisterCallback("WorldQuestsUpdate", ApplyMapHandlingLater)
++EventRegistry:RegisterCallback("MapCanvas.MapSet", ApplyMapHandlingLater)
++EventRegistry:RegisterCallback("WorldMapOnShow", ApplyMapHandlingLater)
++EventRegistry:RegisterCallback("SuperTracking.OnChange", ApplyMapHandlingLater)
+ CallbackRegistry.Add("Waypoint.SlowUpdate", function()
+     if not Navigation_DataProvider:IsEnabled() then return end
+     Navigation_DataProvider:UpdateIgnoreState()
+
+--- a/WaypointUI/libs/HereBeDragons/HereBeDragons.xml	2026-09-13 08:27:36.000000000 +0200
++++ b/WaypointUI/libs/HereBeDragons/HereBeDragons.xml	2026-11-12 01:04:24.943953057 +0100
+@@ -1,4 +1,5 @@
+ <Ui xmlns="http://www.blizzard.com/wow/ui/">
+ 	<Script file="HereBeDragons-2.0.lua"/>
+-	<Script file="HereBeDragons-Pins-2.0.lua"/>
++	<!-- DeckForever: Pins not loaded (WaypointUI never uses it; its world map data provider, run as the map opens,
++	     tainted the gamepad UI: SetPreferredGamepadInteractTarget blocked) -->
+ </Ui>

@@ -41,6 +41,10 @@ breaks the loop). So:
   override bindings on PAD1/PAD2 lose to Easy Controller's: to take A/B, a frame's own
   `OnGamePadButtonDown` (`EnableGamePadButton`, `SetPropagateGamePadInput` per button).
 - New .lua files in the .toc load only after the client restarts, not at a `/reload`.
+- Another addon's code run inside the world map's opening (an `EventRegistry` "WorldMapOnShow" /
+  "MapCanvas.MapSet" callback, a map data provider such as HereBeDragons-Pins') taints the gamepad UI:
+  the map breaks the controller. WaypointUI is patched for it (`tools/patches/WaypointUI-taint-fix.patch`,
+  `patch -p1` from AddOns/, again after each WaypointUI update): callbacks a frame later, Pins not loaded.
 - `MERCHANT_SHOW` doesn't fire on this client: watch `PLAYER_INTERACTION_MANAGER_FRAME_SHOW` (5 = merchant).
 - Some frames' `IsVisible`/`IsShown` return secret booleans: a boolean test on one errors and taints;
   in a scan over `EnumerateFrames`, wrap each frame's test in `pcall`.

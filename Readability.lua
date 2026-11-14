@@ -35,6 +35,7 @@ local LINE_SIZE = 14
 local HEADER_Y = 72                    -- (the gold rule's height from the screen's top; Improved Forever: 130)
 
 local done = setmetatable({}, { __mode = "k" })
+local morpheus = setmetatable({}, { __mode = "k" })    -- (FontStrings Improved Forever made in Morpheus: Unmorph)
 local function Sharpen(fs, size)
 	if done[fs] or fs:IsForbidden() then return end
 	local ok = fs:SetFont(FONT, size, "OUTLINE")
@@ -52,8 +53,8 @@ local function TargetHeader()
 		for _, region in ipairs({ frame:GetRegions() }) do
 			if region:GetObjectType() == "FontString" then
 				local font, size = region:GetFont()
-				-- (the name: the big Morpheus line; every other line: the small one)
-				if font and font:upper():find("MORPHEUS") then Sharpen(region, NAME_SIZE)
+				-- (the name: the big Morpheus line (made Friz already: see Unmorph); every other line: the small one)
+				if morpheus[region] or font and font:upper():find("MORPHEUS") then Sharpen(region, NAME_SIZE)
 				else Sharpen(region, math.max(LINE_SIZE, size or 0)) end
 			end
 		end
@@ -74,40 +75,30 @@ local function MoveHeader()
 	origin:SetPoint("CENTER", UIParent, "TOP", 0, -HEADER_Y)
 end
 
--- Improved Forever's cards (Card.lua: the world tooltip, the quest tracker's cards (QuestPeek.lua), the buff
--- notices) and its other headers (zone, level up, quest progress): their titles in Morpheus too. Same font
--- as the target header's name above. A card makes its rows as it lays them out (Card:Row(i), row 1 = the
--- title), and Row is called again at every layout: a hook on it catches every row, whenever it was made.
-local CARD_TITLE_SIZE = 18             -- (Morpheus 22 in Improved Forever)
-local BANNER_SIZE = 24                 -- (Morpheus 30: the zone's, the level's, the quest's name)
-local cardHooked
-local function Cards()
-	local card = ImprovedForever and ImprovedForever.Interface and ImprovedForever.Interface.Card
-	if cardHooked or not card or type(card.Row) ~= "function" then return end
-	cardHooked = true
-	hooksecurefunc(card, "Row", function(self, i)
-		local r = i == 1 and self.rows and self.rows[1]
-		if r then Sharpen(r.left, CARD_TITLE_SIZE) Sharpen(r.right, CARD_TITLE_SIZE) end
+-- Improved Forever's Morpheus (its headers, cards, tooltip, nameplates, camp, journal, tour...): hard to read
+-- on the Deck. Every font Improved Forever's code asks in Morpheus is turned into the target header's (above):
+-- Friz Quadrata outlined, at 80 % of the size asked (Friz is bigger at the same size: the cards' title,
+-- Morpheus 22, comes out at 18). The journal's parchment (ImprovedForever_Journal, ImprovedForever/Book.lua)
+-- gets no outline: black on ink is a smudge. One post-hook on the FontString's and the Font's SetFont (they
+-- load after us, so every string is caught as it's made): a call that isn't Morpheus returns at once; the
+-- caller is told by the stack (only Improved Forever's files). Our own SetFont is the method from before the
+-- hook: a hooked function never runs inside its own hook.
+local MORPH_RATIO = 0.8
+local function Unmorph(kind)
+	local methods = kind and getmetatable(kind) and getmetatable(kind).__index
+	if type(methods) ~= "table" or type(methods.SetFont) ~= "function" then return end
+	local rawSetFont = methods.SetFont
+	hooksecurefunc(methods, "SetFont", function(obj, font, size, flags)
+		if type(font) ~= "string" or not font:upper():find("MORPHEUS", 1, true) then return end
+		local stack = debugstack(2, 4, 0) or ""
+		if not stack:find("ImprovedForever", 1, true) then return end
+		local parchment = stack:find("ImprovedForever_Journal", 1, true) or stack:find("ImprovedForever/Book.lua", 1, true)
+		morpheus[obj] = true
+		rawSetFont(obj, FONT, math.floor((tonumber(size) or 14) * MORPH_RATIO + 0.5), parchment and (flags or "") or "OUTLINE")
 	end)
 end
-
-local function Banners()
-	for _, name in ipairs({ "ImprovedForeverZoneBanner", "ImprovedForeverLevelBanner", "ImprovedForeverQuestProgress" }) do
-		local banner = _G[name]
-		local function walk(frame, depth)
-			for _, region in ipairs({ frame:GetRegions() }) do
-				if region:GetObjectType() == "FontString" then
-					local font = region:GetFont()
-					if font and font:upper():find("MORPHEUS") then Sharpen(region, BANNER_SIZE) end
-				end
-			end
-			if depth < 3 then
-				for _, child in ipairs({ frame:GetChildren() }) do walk(child, depth + 1) end
-			end
-		end
-		if banner then walk(banner, 0) end
-	end
-end
+Unmorph(UIParent:CreateFontString())
+Unmorph(GameFontNormal)
 
 local BRUSH = "Interface\\AddOns\\AishCore\\Media\\XPBar\\grunge_spot1.png"
 local CORNER = { x = -46, y = -34, w = 124, h = 80 }      -- (its dark body over the corner, its top under the badge's)
@@ -152,7 +143,7 @@ local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(Cards) pcall(Banners) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
 -- Spoken's subtitles by the character (see the top)

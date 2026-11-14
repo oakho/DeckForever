@@ -74,6 +74,41 @@ local function MoveHeader()
 	origin:SetPoint("CENTER", UIParent, "TOP", 0, -HEADER_Y)
 end
 
+-- Improved Forever's cards (Card.lua: the world tooltip, the quest tracker's cards (QuestPeek.lua), the buff
+-- notices) and its other headers (zone, level up, quest progress): their titles in Morpheus too. Same font
+-- as the target header's name above. A card makes its rows as it lays them out (Card:Row(i), row 1 = the
+-- title), and Row is called again at every layout: a hook on it catches every row, whenever it was made.
+local CARD_TITLE_SIZE = 18             -- (Morpheus 22 in Improved Forever)
+local BANNER_SIZE = 24                 -- (Morpheus 30: the zone's, the level's, the quest's name)
+local cardHooked
+local function Cards()
+	local card = ImprovedForever and ImprovedForever.Interface and ImprovedForever.Interface.Card
+	if cardHooked or not card or type(card.Row) ~= "function" then return end
+	cardHooked = true
+	hooksecurefunc(card, "Row", function(self, i)
+		local r = i == 1 and self.rows and self.rows[1]
+		if r then Sharpen(r.left, CARD_TITLE_SIZE) Sharpen(r.right, CARD_TITLE_SIZE) end
+	end)
+end
+
+local function Banners()
+	for _, name in ipairs({ "ImprovedForeverZoneBanner", "ImprovedForeverLevelBanner", "ImprovedForeverQuestProgress" }) do
+		local banner = _G[name]
+		local function walk(frame, depth)
+			for _, region in ipairs({ frame:GetRegions() }) do
+				if region:GetObjectType() == "FontString" then
+					local font = region:GetFont()
+					if font and font:upper():find("MORPHEUS") then Sharpen(region, BANNER_SIZE) end
+				end
+			end
+			if depth < 3 then
+				for _, child in ipairs({ frame:GetChildren() }) do walk(child, depth + 1) end
+			end
+		end
+		if banner then walk(banner, 0) end
+	end
+end
+
 local BRUSH = "Interface\\AddOns\\AishCore\\Media\\XPBar\\grunge_spot1.png"
 local CORNER = { x = -46, y = -34, w = 124, h = 80 }      -- (its dark body over the corner, its top under the badge's)
 local corner
@@ -117,7 +152,7 @@ local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(Cards) pcall(Banners) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
 -- Spoken's subtitles by the character (see the top)

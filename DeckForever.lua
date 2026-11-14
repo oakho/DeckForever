@@ -289,15 +289,8 @@ end
 -- Edit Mode keeps the default place's frame on the screen with room round it, so the tooltip is put
 -- there after the game anchors it (a plain frame: not protected). The game keeps 25 above the tooltip
 -- on the screen (room for a comparison's "Equipped" header): none while it's at its default place, the
--- 25 back as it hides. While it's there, over the top of the quests, the quests fade (Fader)
--- the tooltip shows at its default place, over the quests (read, not hooked: a hook on its SetOwner,
--- which GameTooltip_SetDefaultAnchor calls, errored)
-local function TipOverQuests()
-	local tip = GameTooltip
-	if not tip or tip:IsForbidden() or not tip:IsShown() or tip:GetNumPoints() ~= 1 then return false end
-	local point, relative, _, x, y = tip:GetPoint(1)
-	return point == "TOPRIGHT" and relative == UIParent and math.abs(x + (M - 2)) < 0.5 and math.abs(y + (M - 2)) < 0.5
-end
+-- 25 back as it hides. (The quests no longer fade under it: Improved Forever's world tooltip, top left,
+-- shows instead of it over the world.)
 local oursActive                 -- our layout is the one in use (seen as the world loads)
 local function PlaceTooltip(tooltip)
 	if not oursActive or tooltip ~= GameTooltip or tooltip:IsForbidden() then return end
@@ -373,7 +366,6 @@ end
 local FADE_TIME = 0.25
 local IN_COMBAT_ALPHA = 0.3           -- the non-essentials, in combat
 local CALM_ALPHA = 0.35               -- the fight's frames, out of combat
-local QUESTS_UNDER_TIP = 0.25         -- the quests, under the tooltip at its default place
 local CHAT_ALPHA = 0.65               -- the chat's messages
 local XP_ALPHA = 0.5                  -- the XP bar (Blizzard's colours, bright beside the rest)
 
@@ -389,11 +381,11 @@ local FADED = {
 	end,
 	DeckForeverXPBar = function() return Fighting() and IN_COMBAT_ALPHA or XP_ALPHA end,
 	ObjectiveTrackerFrame = function()
-		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
+		return Fighting() and IN_COMBAT_ALPHA or 1
 	end,
 	-- (Improved Forever's quest tracker, shown in the game's one's place: the same)
 	IFObjectiveTrackerFrame = function()
-		return math.min(Fighting() and IN_COMBAT_ALPHA or 1, TipOverQuests() and QUESTS_UNDER_TIP or 1)
+		return Fighting() and IN_COMBAT_ALPHA or 1
 	end,
 	-- the gamepad help: hidden at rest (its moves are known by heart); shown while LB or RB is held (their
 	-- groups) and in menus

@@ -100,6 +100,23 @@ end
 Unmorph(UIParent:CreateFontString())
 Unmorph(GameFontNormal)
 
+-- Improved Forever's cards (top left: the world tooltip, the quests' cards) are kept under the Fishing module's
+-- guide line (Card.Top: ImprovedForever.Fishing.GuideBottom, 70 down), shown or not: the player's own top
+-- padding (sidebarTop, 5 %: about 42) did nothing. The guide's room counted only while it shows (fishing);
+-- the cards are docked again each frame, so they slide down under it and back up.
+local guideWrapped
+local function FishingGuide()
+	local F = ImprovedForever and ImprovedForever.Fishing
+	if guideWrapped or not F or type(F.GuideBottom) ~= "function" then return end
+	guideWrapped = true
+	local GuideBottom = F.GuideBottom
+	F.GuideBottom = function(...)
+		local guide = _G.ImprovedForeverFishingGuide
+		if guide and not guide:IsShown() then return nil end
+		return GuideBottom(...)
+	end
+end
+
 local BRUSH = "Interface\\AddOns\\AishCore\\Media\\XPBar\\grunge_spot1.png"
 local CORNER = { x = -46, y = -34, w = 124, h = 80 }      -- (its dark body over the corner, its top under the badge's)
 local corner
@@ -143,7 +160,7 @@ local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(FishingGuide) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
 -- Spoken's subtitles by the character (see the top)

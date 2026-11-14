@@ -549,13 +549,26 @@ SlashCmdList.DIAGDEV = function(msg)
   else local k = {} for n in pairs(X) do k[#k + 1] = n end table.sort(k) print("dgx: " .. table.concat(k, " ")) end
 end
 
--- party: Improved Forever's party cards previewed (/if cards: a stand-in in every slot, no group needed), or the
--- preview ended. Its "Party cards" setting is left as the player has it (off on the Deck).
+-- party: EllesmereUI's party frames previewed in their real place (a stand-in in each of the 5 slots, no group
+-- needed), or the preview ended. Its preview only shows with its options open: its test flag lets it, and its
+-- "real" preview mode (not the overlay in the screen's middle) is set for the preview, put back after.
 function X.party()
-  local IN = ImprovedForever and ImprovedForever.Interface
-  local PC = IN and IN.PartyCards
-  if not PC then return print("dgx party: Improved Forever's Immersion not loaded") end
-  PC.TogglePreview()
+  local ns = EllesmereUI and EllesmereUI._ModuleNS and EllesmereUI._ModuleNS.EllesmereUIRaidFrames
+  local E = EllesmereUIDB and EllesmereUIDB.profiles and EllesmereUIDB.profiles[EllesmereUIDB.activeProfile]
+  local rf = E and E.addons and E.addons.EllesmereUIRaidFrames
+  if not (ns and ns.ShowPartyPreview and rf) then return print("dgx party: EllesmereUI's raid frames not loaded") end
+  if InCombatLockdown() then return print("dgx party: not in combat") end
+  if ns._partyPvActive then
+    ns.HidePartyPreview()
+    rf.previewMode, ns._testMode = X.partyWas, nil
+    X.partyWas = nil
+    print("dgx party: preview off")
+  else
+    X.partyWas = rf.previewMode
+    rf.previewMode, ns._testMode = "real", true
+    ns.ShowPartyPreview()
+    print("dgx party: preview on (CTRL-SHIFT-HOME again to end it)")
+  end
 end
 
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the

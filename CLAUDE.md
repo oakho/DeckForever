@@ -68,7 +68,7 @@ WoW runs in Desktop Mode under Proton; drive it with `xdotool` (window "World of
 - Keyboard is AZERTY: `xdotool type` mangles q/a/z/w/m; avoid them in typed commands.
 - Easy Controller's on-screen keyboard opens with the chat: close it with its X (click 1070,358).
 - Never press Escape blindly (opens the game menu). Never click the forbidden-action popup.
-- Dev keys only from `!DiagErreurs` (CTRL-SHIFT-F1..F12, CTRL-SHIFT-HOME = Improved Forever party preview on/off, CTRL-SHIFT-END = work session); check
+- Dev keys only from `!DiagErreurs` (CTRL-SHIFT-F1..F12, CTRL-SHIFT-HOME = EllesmereUI party frames preview on/off, CTRL-SHIFT-END = work session); check
   `~/.config/kglobalshortcutsrc` before sending any other combo: CTRL-ALT-Fn switches the console, and
   ALT-SHIFT-F12 (KDE's "suspend compositing"), sent during a reload, froze the Deck's screen (reboot).
 - Work session (CTRL-SHIFT-END, 6 h max): LT + paddle 3 runs a "Capture" macro (the game's own

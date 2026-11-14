@@ -129,9 +129,18 @@ DeckPlacements = function(A, E, live, C, W)
 	-- hide the game's: the gamepad's "Améliorations" (LB / RB / Y) only goes through the game's
 	local uf = E.addons.EllesmereUIUnitFrames
 	if uf and uf.playerAuraBars then uf.playerAuraBars.enabled = false end
+	-- the party (EllesmereUIRaidFrames): AishUI's healer layout (ours is built from it) had it in a row at the
+	-- bottom's middle, over the gamepad bar. A column down the left edge instead, M from it, its middle
+	-- PARTY_UP over the screen's (between Improved Forever's cards, top left, and the chat, bottom left)
+	local rf = E.addons.EllesmereUIRaidFrames
+	if rf then rf.partyHorizontal, rf.partyFlipGrowth = false, false end
+	local PARTY_UP = 40
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -(M + MAP_RIM), offsetY = 0,
 			edge = { key = "SCREEN_BOTTOM", side = "TOP", offset = B } }
+		if rf then
+			anchors.RF_PartyFrames = { side = "RIGHT", target = "SCREEN_LEFT", offsetX = M, offsetY = PARTY_UP }
+		end
 	end
 
 	------------------------------------------------------------------ Chattynator

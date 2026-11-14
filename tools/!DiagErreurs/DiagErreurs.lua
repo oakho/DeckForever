@@ -549,10 +549,21 @@ SlashCmdList.DIAGDEV = function(msg)
   else local k = {} for n in pairs(X) do k[#k + 1] = n end table.sort(k) print("dgx: " .. table.concat(k, " ")) end
 end
 
+-- party: Improved Forever's party cards on (its "Party cards" setting) and its preview toggled (/if cards: a
+-- stand-in in every slot, no group needed)
+function X.party()
+  local IN = ImprovedForever and ImprovedForever.Interface
+  local PC = IN and IN.PartyCards
+  if not PC then return print("dgx party: Improved Forever's Immersion not loaded") end
+  local s = IN.Settings()
+  if not s.cards then s.cards = true PC.Apply() print("dgx party: Party cards on") end
+  PC.TogglePreview()
+end
+
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
--- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload. Override bindings, out of combat.
+-- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload, HOME = /dgx party. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.rd() end, F12 = function() X.pd() end, F10 = function() X.deck() end }
+  local keys = { F9 = function() X.pv() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.rd() end, F12 = function() X.pd() end, F10 = function() X.deck() end, HOME = function() X.party() end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

@@ -549,14 +549,12 @@ SlashCmdList.DIAGDEV = function(msg)
   else local k = {} for n in pairs(X) do k[#k + 1] = n end table.sort(k) print("dgx: " .. table.concat(k, " ")) end
 end
 
--- party: Improved Forever's party cards on (its "Party cards" setting) and its preview toggled (/if cards: a
--- stand-in in every slot, no group needed)
+-- party: Improved Forever's party cards previewed (/if cards: a stand-in in every slot, no group needed), or the
+-- preview ended. Its "Party cards" setting is left as the player has it (off on the Deck).
 function X.party()
   local IN = ImprovedForever and ImprovedForever.Interface
   local PC = IN and IN.PartyCards
   if not PC then return print("dgx party: Improved Forever's Immersion not loaded") end
-  local s = IN.Settings()
-  if not s.cards then s.cards = true PC.Apply() print("dgx party: Party cards on") end
   PC.TogglePreview()
 end
 

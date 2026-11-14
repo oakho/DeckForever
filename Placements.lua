@@ -134,7 +134,9 @@ DeckPlacements = function(A, E, live, C, W)
 	-- the chat's top (Chattynator, below: B + its height): as low as it goes, Improved Forever's cards (top
 	-- left: the world tooltip, the quests' cards, stacking down) keep the room above
 	local rf = E.addons.EllesmereUIRaidFrames
-	if rf then rf.partyHorizontal, rf.partyFlipGrowth = false, false end
+	-- each frame PARTY_H tall (AishUI: 45; the column of 5 then 180 instead of 245), as wide as AishUI's (150)
+	local PARTY_H = 32
+	if rf then rf.partyHorizontal, rf.partyFlipGrowth, rf.partyFrameHeight = false, false, PARTY_H end
 	local CHAT_TOP = B + MAP + 18          -- (the chat window's height, below)
 	for _, anchors in ipairs({ E.unlockLayout.anchors, live }) do
 		anchors.EBS_Minimap = { side = "LEFT", target = "SCREEN_RIGHT", offsetX = -(M + MAP_RIM), offsetY = 0,

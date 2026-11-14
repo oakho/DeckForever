@@ -447,11 +447,13 @@ local function CalmDriver()
 	calmDriver:SetAttribute("apply", [[
 		local fight = self:GetAttribute("state-calm")
 		local awake = tonumber(self:GetAttribute("state-awake")) or 0
+		-- (the horizontal skill bar on, SkillBar.lua: the game's bar at 0, ours shows it)
+		local hidden = self:GetAttribute("skillBar")
 		for i = 1, self:GetAttribute("calmCount") do
 			local frame = self:GetFrameRef("calm" .. i)
 			if frame then
 				if self:GetAttribute("wakes" .. i) then
-					frame:SetAlpha(fight == "fight" and 1 or awake)
+					frame:SetAlpha(hidden and 0 or (fight == "fight" and 1 or awake))
 				else
 					frame:SetAlpha(fight ~= "calm" and 1 or self:GetAttribute("calmAlpha" .. i))
 				end
@@ -990,8 +992,10 @@ SlashCmdList.DECKFOREVER = function(msg)
 		Print("bandeau de rechargement au prochain /reload.")
 	elseif msg == "camera" or msg == "vue" then
 		ns.CameraProfile(Print)
+	elseif msg == "skill" then
+		ns.CycleSkillBar()
 	else
-		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat · /df camera : profil caméra DynamicCam.")
+		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat · /df camera : profil caméra DynamicCam · /df skill : barre horizontale (rond, espace, off).")
 	end
 end
 

@@ -89,6 +89,12 @@ local function Tile(size, shape)
 	t.slotBg:SetPoint("CENTER")
 	t.slotBg:SetSize(size, size)
 	t.icon = t:CreateTexture(nil, "ARTWORK")
+	-- (behind one of the game's symbols, dark on the dark slot: a soft light, so it reads)
+	t.halo = t:CreateTexture(nil, "ARTWORK", nil, -1)
+	t.halo:SetPoint("CENTER")
+	t.halo:SetTexture(ROUND_MASK)
+	t.halo:SetVertexColor(0.85, 0.8, 0.7, 0.55)
+	t.halo:Hide()
 	t.mask = t:CreateMaskTexture()
 	t.mask:SetPoint("CENTER")
 	t.mask:SetSize(size * 0.94, size * 0.94)
@@ -170,7 +176,7 @@ local function Restyle(t)
 	end
 	t.lit:ClearAllPoints()
 	t.lit:SetAllPoints(t.icon)
-	t.pressedLook = nil
+	t.pressedLook, t.iconSymbol = nil, nil
 end
 
 -- pressed and proc shown in the look in use
@@ -257,10 +263,44 @@ local function Layout()
 end
 
 ------------------------------------------------------------------ mirroring the game's buttons
+-- The interact button (the top bar's face cluster's first, X): the game draws on it the cursor of what you'd
+-- interact with (SetUnitCursorTexture: a herb's, an NPC's), a picture it can't hand on; ours draws the same,
+-- for the unit the game's would (Improved Forever's way: the soft interact target in reach, else the target)
+local function InteractButton()
+	local pu = PageUnit()
+	local top = pu and pu.actionBars and pu.actionBars.topBar
+	return top and top.Right and top.Right.ActionButton1
+end
+local function Yes(fn, unit)
+	if not fn then return false end
+	local ok, v = pcall(fn, unit)
+	return ok and not Secret(v) and v and true or false
+end
+local function CursorUnit()
+	if (Yes(UnitExists, "softinteract") or Yes(UnitIsGameObject, "softinteract")) then
+		if Yes(UnitIsInInteractRange, "softinteract") then return "softinteract" end
+	end
+	if Yes(UnitExists, "target") and Yes(UnitIsInteractable, "target") then return "target" end
+end
+local INTERACT = "Interface\\Cursor\\Interact"     -- (nothing in reach: the game's interact cursor, dimmed)
+
+-- The icon as a spell's or item's (cropped, the tile's size) or as one of the game's symbols (the face
+-- buttons' own: a magnifier, a jump; a cursor): upright, smaller, its own colour
+local function IconAs(t, symbol)
+	if t.iconSymbol == symbol then return end
+	t.iconSymbol = symbol
+	t.halo:SetSize(t:GetWidth() * 0.78, t:GetWidth() * 0.78)
+	t.halo:SetShown(symbol and true or false)
+	if not t.atlas then return end              -- (flat: the icon fills the tile either way)
+	local size = t:GetWidth() * (symbol and 0.62 or 0.94)
+	t.icon:SetSize(size, size)
+end
+
 local function Mirror(t, native)
 	local shown = native and native:IsShown()
 	local icon = shown and native.icon
 	local texture = icon and icon:IsShown() and icon:GetTexture()
+	local symbol
 	local special = shown and native.SpecialActionIcon
 	if special and special:IsShown() then
 		local atlas = special.GetAtlas and special:GetAtlas()
@@ -269,10 +309,28 @@ local function Mirror(t, native)
 			texture = true
 		else
 			texture = special:GetTexture()
+			if texture then t.icon:SetTexture(texture) t.icon:SetTexCoord(special:GetTexCoord()) texture = true end
+		end
+		symbol, icon = true, special
+	end
+	if shown and native == InteractButton() then
+		local unit = CursorUnit()
+		local ok, drawn = unit and pcall(SetUnitCursorTexture, t.icon, unit, nil, nil, false)
+		if ok and drawn and not Secret(drawn) then
+			t.icon:SetTexCoord(0, 1, 0, 1)
+			texture, symbol, icon = true, true, nil
+			t.icon:SetVertexColor(1, 1, 1)
+			t.icon:SetDesaturated(false)
+		elseif not texture then
+			t.icon:SetTexture(INTERACT)
+			t.icon:SetTexCoord(0, 1, 0, 1)
+			t.icon:SetVertexColor(0.7, 0.7, 0.7)
+			texture, symbol, icon = true, true, nil
 		end
 	end
 	if not texture then
 		t.icon:SetTexture(nil)
+		IconAs(t, nil)
 		t.count:SetText("")
 		t.cooldown:Clear()
 		t.lit:SetAlpha(0)
@@ -280,11 +338,12 @@ local function Mirror(t, native)
 		t.cdKey = nil
 		return
 	end
+	IconAs(t, symbol)
 	if texture ~= true then
 		t.icon:SetTexture(texture)
 		t.icon:SetTexCoord(unpack(ICON_CROP))
 	end
-	-- the game's tint (unusable: grey; out of mana: blue; out of range: red)
+	-- the game's tint (unusable: grey; out of mana: blue; out of range: red); a symbol's, its own
 	if icon then
 		pcall(function()
 			t.icon:SetVertexColor(icon:GetVertexColor())

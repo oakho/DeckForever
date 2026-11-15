@@ -651,10 +651,65 @@ X.btn = function()
   db.btnProbe = out
   print("dgx btn: " .. #out .. " lines (saved at the next reload)")
 end
+-- pu: the game's gamepad bar's whole tree (PageUnit and the frame above it): every frame and texture, its
+-- key, shown / visible, size, place from the bar's centre, and for a button its action and slot art
+-- (db.puProbe)
+X.pu = function()
+  local out = {}
+  local function num(v) return type(v) == "number" and ("%.0f"):format(v) or tostring(v) end
+  local main = GamepadMainActionBarFrame
+  if not main then return end
+  local bx, by = main:GetCenter()
+  local function line(r, depth)
+    local ok, s = pcall(function()
+      local cx, cy = r:GetCenter()
+      local w, h = r:GetSize()
+      local p = { ("  "):rep(depth) .. r:GetObjectType(), "key=" .. tostring(r.GetParentKey and r:GetParentKey()),
+        "name=" .. tostring(r.GetName and r:GetName()), "vis=" .. tostring(r:IsVisible()), "shown=" .. tostring(r:IsShown()),
+        "size=" .. num(w) .. "x" .. num(h), "off=" .. num(cx and cx - bx) .. "," .. num(cy and cy - by) }
+      if r.GetAtlas then p[#p + 1] = "atlas=" .. tostring(r:GetAtlas()) end
+      if r.action then p[#p + 1] = "action=" .. tostring(r.action) end
+      if r.SlotArt then p[#p + 1] = "slot=" .. tostring(r.SlotArt:GetAtlas()) end
+      if r.GetText and r:GetObjectType() == "FontString" then p[#p + 1] = "text=" .. tostring(r:GetText()) end
+      return table.concat(p, " ")
+    end)
+    out[#out + 1] = ok and s or "err"
+  end
+  local function walk(f, depth)
+    for _, r in ipairs({ f:GetRegions() }) do if r:GetObjectType() ~= "MaskTexture" then line(r, depth) end end
+    for _, c in ipairs({ f:GetChildren() }) do
+      line(c, depth)
+      -- (into a button: no, its own layers are the btn probe's)
+      if depth < 4 and not c.action and c:GetObjectType() ~= "Cooldown" then walk(c, depth + 1) end
+    end
+  end
+  walk(main, 0)
+  db.puProbe = out
+end
 do
   local f = CreateFrame("Frame")
   f:RegisterEvent("PLAYER_ENTERING_WORLD")
-  f:SetScript("OnEvent", function() C_Timer.After(4, function() pcall(X.btn) end) end)
+  f:SetScript("OnEvent", function() C_Timer.After(4, function() pcall(X.pu) end) end)
+end
+
+-- keys: what the paddles' keys run (F9-F12, plain and with each modifier; override bindings first) and the
+-- triggers' modifier settings (db.keyProbe; at each login)
+X.keys = function()
+  local out = {}
+  for _, cvar in ipairs({ "GamePadEmulateShift", "GamePadEmulateCtrl", "GamePadEmulateAlt" }) do
+    out[#out + 1] = cvar .. "=" .. tostring(GetCVar(cvar))
+  end
+  for _, key in ipairs({ "F9", "F10", "F11", "F12" }) do
+    for _, prefix in ipairs({ "", "SHIFT-", "CTRL-", "ALT-" }) do
+      out[#out + 1] = prefix .. key .. " = " .. tostring(GetBindingAction(prefix .. key, true)) .. " (plain: " .. tostring(GetBindingAction(prefix .. key)) .. ")"
+    end
+  end
+  db.keyProbe = out
+end
+do
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  f:SetScript("OnEvent", function() C_Timer.After(5, function() pcall(X.keys) end) end)
 end
 
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the

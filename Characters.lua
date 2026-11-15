@@ -18,8 +18,8 @@
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
 -- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
 -- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 1, by its
--- "Roue emotes" macro), Improved Forever's peek map (paddle 3, alone or with LT); Improved
--- Forever's Wheel module on, RB + R3 back to the game's (R3 alone stays the ping).
+-- "Roue emotes" macro), Improved Forever's peek map (LT + paddle 3); Improved
+-- Forever's Wheel module on, its wheels that would take R3 alone back to the game's (R3 alone stays the ping).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
 
@@ -47,13 +47,15 @@ for _, name in ipairs({
 local EMOTE_MACRO, EMOTE_BODY = "Roue emotes", "/click ImprovedForeverWheel_emotes Macro"
 -- (LT + paddle 3 (L5, F11): Improved Forever's peek map, shown while held: the game command clicking its
 -- hold button (press opens, release closes). A macro gets no release (Easy Controller's router passes one
--- only to its wheels), and a command waits for its exact key: LT + paddle may come without Shift, so the
--- paddle alone has it too (it was free))
+-- only to its wheels). Easy Controller binds an LT layer's command to the paddle's plain key too while the
+-- plain layer is empty (LT + paddle may come without Shift): the paddle alone is set to Nothing, so only
+-- SHIFT-F11 opens it (the player's choice; an LT + paddle that came without Shift then does nothing))
 local PEEK = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton"
 local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes",
-	["TR1:LT"] = "macro:" .. EMOTE_MACRO, ["TR3:"] = PEEK, ["TR3:LT"] = PEEK }
+	["TR1:LT"] = "macro:" .. EMOTE_MACRO, ["TR3:LT"] = PEEK, ["TR3:"] = "none:none" }
 -- (put by an earlier DeckForever, taken back: the command on LT + paddle 3)
-local EC_GONE = { ["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton" }
+local EC_GONE = { ["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton",
+	["TR3:"] = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton" }
 
 local function Print(msg) print("|cff66ccffDeckForever|r : " .. msg) end
 
@@ -283,10 +285,13 @@ local function EasyController()
 	if changed then ns.NeedReload("roues Easy Controller") end
 end
 
--- Improved Forever's wheels (its Wheel module, on for every character: the emote wheel on LT + paddle 3)
--- without R3 taken: a wheel on a combo whose button makes no modifier (RB + R3) makes it take R3 alone,
--- and R3 alone is the game's ping (it can't run it for it): that combo back to the game's (account-wide)
+-- Improved Forever's wheels (its Wheel module, on for every character: the emote wheel on LT + paddle 1)
+-- without R3 taken: a wheel on R3 alone, or on a combo whose button makes no modifier (the game's
+-- GamePadEmulateShift / Ctrl / Alt: none of LB, RB, LT, RT on the Deck now), makes it take R3 alone, and R3
+-- alone is the game's ping (it can't run it for it): those combos back to the game's (account-wide), by
+-- Improved Forever's own rule (Ring.lua, ApplyRingBindings). A trigger made a modifier again keeps its wheel.
 local WHEEL = "ImprovedForever_Wheel"
+local COMBO_BUTTONS = { L1 = "PADLSHOULDER", L2 = "PADLTRIGGER", R1 = "PADRSHOULDER", R2 = "PADRTRIGGER" }
 local function Wheels()
 	local guid = UnitGUID("player")
 	local okState, state = pcall(C_AddOns.GetAddOnEnableState, WHEEL, guid)
@@ -295,10 +300,23 @@ local function Wheels()
 		ns.NeedReload("roues Improved Forever")
 	end
 	local db = rawget(_G, "ImprovedForeverDB")
-	if type(db) == "table" and type(db.combos) == "table" and db.combos.R1 and db.combos.R1 ~= "native" then
-		db.combos.R1 = "native"
+	if type(db) ~= "table" or type(db.combos) ~= "table" then return end
+	local changed = false
+	for combo, ring in pairs(db.combos) do
+		local button = COMBO_BUTTONS[combo]
+		local modifier = false
+		for _, cvar in ipairs({ "GamePadEmulateShift", "GamePadEmulateCtrl", "GamePadEmulateAlt" }) do
+			if button and GetCVar(cvar) == button then modifier = true end
+		end
+		if ring ~= "native" and not modifier then
+			db.combos[combo] = "native"
+			changed = true
+		end
+	end
+	if changed then
 		local IF = rawget(_G, "ImprovedForever")
 		if IF and IF.ApplyRingBindings then pcall(IF.ApplyRingBindings) end
+		Print("roues d'Improved Forever sur R3 rendues au jeu (le ping reste sur R3).")
 	end
 end
 

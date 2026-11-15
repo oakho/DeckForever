@@ -9,7 +9,8 @@
 --   * AishUI's level badge (its XP bar), bottom left: its dark brush has clear edges and stops short of
 --     the screen's corner. The same brush, drawn under it, fills the corner (ours: nothing of AishUI's
 --     moved; the level stays centred on AishUI's brush).
---   * the game's gamepad wheel (GamepadRadial, not protected): 312 right of the screen's centre, put on it
+--   * the game's gamepad wheel (GamepadRadial, not protected) and Improved Forever's (ImprovedForeverRing):
+--     312 right of the screen's centre, put on it
 --   * Easy Controller's supplies (bag space, reagents): their counts are in NumberFontNormal, thickly
 --     outlined in black; on the orange "low" pill the count is dark brown: a blur. Plain Arial Narrow
 --     with a light shadow, readable on the dark pill and the orange one (Easy Controller sets the colour).
@@ -121,7 +122,7 @@ end
 -- (bottom right) (Card.lua docks the first at 40 from the left, the player's top padding (5 %: 40) down;
 -- the diamond's points are the panel's edges). Not while the Fishing guide shows (the cards keep under it),
 -- nor while the pad is on the quests' cards: their legend (QuestPeek.lua) is placed above the cards' default
--- corner, which then has to be free. Card:Dock runs every frame; ours moves the panel only when it's elsewhere.
+-- corner, which then has to be free. Hidden while our gamepad help shows. Card:Dock runs every frame; ours moves the panel only when it's elsewhere.
 local CARD_M = 8
 local cornerWrapped, peekLegend
 local function FindPeekLegend()
@@ -143,7 +144,13 @@ local function CardsCorner()
 	Card.Dock = function(self, ...)
 		Dock(self, ...)
 		local panel = self.panel
-		if not panel or panel:GetNumPoints() ~= 1 then return end
+		if not panel then return end
+		-- (our gamepad help (Legend.lua, top left, LB / RB held, menus) shows over them: the cards fade out
+		-- as it fades in (DeckForever.lua's fader eases its alpha), back as it goes)
+		local help = _G.DeckForeverLegend
+		local over = help and help:IsShown() and help:GetAlpha() or 0
+		if math.abs(panel:GetAlpha() - (1 - over)) > 0.01 then panel:SetAlpha(1 - over) end
+		if panel:GetNumPoints() ~= 1 then return end
 		local _, relative, _, x, y = panel:GetPoint(1)
 		if relative ~= UIParent then return end              -- (under another card)
 		local scale, h = Card.Scale(), UIParent:GetHeight()
@@ -201,11 +208,28 @@ local function CentreRadial()
 	radial:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 end
 
+-- Improved Forever's wheels (its Wheel module's ring, ImprovedForeverRing): put where the game's own radial
+-- had it (312 right of the centre); centred on the screen as the game's is above. Its place is set again by
+-- its size setting (IF.ApplyRingScale, out of combat): followed by a hook on it (Improved Forever's, nothing
+-- of Blizzard's). Out of combat only (a secure frame of its own).
+local ringHooked
+local function CentreRing()
+	local ring = _G.ImprovedForeverRing
+	if not ring or InCombatLockdown() then return end
+	ring:ClearAllPoints()
+	ring:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	local IF = rawget(_G, "ImprovedForever")
+	if not ringHooked and IF and type(IF.ApplyRingScale) == "function" then
+		ringHooked = true
+		hooksecurefunc(IF, "ApplyRingScale", function() pcall(CentreRing) end)
+	end
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")       -- (lines may be made as the header first shows)
 f:RegisterEvent("BAG_UPDATE_DELAYED")          -- (a supply's button made as it first shows)
-f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(FishingGuide) pcall(CardsCorner) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial)
+f:SetScript("OnEvent", function() pcall(TargetHeader) pcall(MoveHeader) pcall(FishingGuide) pcall(CardsCorner) pcall(LevelCorner) pcall(SupplyCounts) pcall(CentreRadial) pcall(CentreRing)
 	C_Timer.After(2, function() pcall(SupplyCounts) end) end)
 
 -- Spoken's subtitles by the character (see the top)

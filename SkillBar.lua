@@ -22,6 +22,7 @@ local M = 8
 local B = M + 4                         -- (from the bottom: over the XP bar)
 local TILE, GAP = 44, 4                 -- (a tile's side; between two of a group)
 local GLYPH, GLYPH_GAP = 30, 0          -- (each button's glyph, under its tile)
+local BADGE = 20                        -- (the same glyph, small, on the tile's top left corner: option "badges")
 local ROUND = 72                        -- (the round's width; the gap round it: ROUND_ROOM)
 local ROUND_ROOM, PLAIN_ROOM = ROUND + 2 * 12, 56
 local CLASS = 34                        -- (a class action's tile, over the strip's end)
@@ -51,6 +52,7 @@ ns.SKILL_PARTS = {
 	{ key = "sticks", label = "L3 / R3 (Easy Controller)" },
 	{ key = "extras", label = "Palettes et pavé tactile (Easy Controller)" },
 	{ key = "pips", label = "Repères de page (LT / RT)" },
+	{ key = "badges", label = "Bouton de la manette dans le coin des actions" },
 	{ key = "recent", label = "Dernière action de roue (Improved Forever)" },
 	{ key = "ground", label = "Fond sombre" },
 }
@@ -90,6 +92,8 @@ local function SetGlyphs()
 			if ok and atlas then
 				t.glyph:SetAtlas(atlas)
 				t.glyph:SetSize(GLYPH, GLYPH)          -- (SetAtlas takes the atlas's own, small, size)
+				t.badge:SetAtlas(atlas)
+				t.badge:SetSize(BADGE, BADGE)
 			end
 		end
 	end
@@ -227,6 +231,14 @@ for _, side in ipairs({ "left", "right" }) do
 		t.glyph = Glyph(strip)
 		t.key = KEYS[side][ORDER[slot]]
 		t.glyph:SetPoint("TOP", t, "BOTTOM", 0, -GLYPH_GAP)
+		-- (the corner glyph: over everything of the tile, either look; on the round slot's edge, the square's corner)
+		t.badgeFrame = CreateFrame("Frame", nil, t)
+		t.badgeFrame:SetAllPoints()
+		t.badgeFrame:SetFrameLevel(t.canvasTop:GetFrameLevel() + 5)
+		t.badge = t.badgeFrame:CreateTexture(nil, "OVERLAY")
+		t.badge:SetSize(BADGE, BADGE)
+		local inset = side == "left" and 3 or 7
+		t.badge:SetPoint("CENTER", t, "TOPLEFT", inset, -inset)
 		tiles[side][slot] = t
 	end
 end
@@ -790,7 +802,9 @@ Refresh = function()
 	for _, side in ipairs({ "left", "right" }) do
 		local cluster = bar and (side == "left" and bar.Left or bar.Right)
 		for _, t in ipairs(tiles[side]) do
-			pcall(Mirror, t, cluster and cluster["ActionButton" .. t.native])
+			local native = cluster and cluster["ActionButton" .. t.native]
+			pcall(Mirror, t, native)
+			t.badgeFrame:SetShown(Show("badges") and native ~= nil and native:IsShown() and t.badge:GetAtlas() ~= nil)
 		end
 		local native = pu and (side == "left" and pu.LeftClassAction or pu.RightClassAction)
 		local on = native ~= nil and native:IsShown() and Show("class")

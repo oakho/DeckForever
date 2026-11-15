@@ -557,7 +557,8 @@ local function Clone(t, native)
 	local cd = native.cooldown
 	if cd then
 		local w, h = cd:GetSize()
-		t.ccd:SetSize(w, h)
+		-- (in combat the game may hand its sizes as secrets: ours keeps its last one)
+		if not Secret(w) and not Secret(h) then t.ccd:SetSize(w, h) end
 		local shape = t.round and "round" or "square"
 		if t.ccdShape ~= shape then
 			t.ccdShape = shape
@@ -772,30 +773,37 @@ local function PlaceExtras()
 end
 
 local tick = 0
+local Refresh
 strip:SetScript("OnUpdate", function(_, elapsed)
 	tick = tick + elapsed
 	if tick < 0.03 then return end
 	tick = 0
+	-- (a part that fails, a secret in combat, stops only its own tick; told once a session, not every frame)
+	local ok, err = pcall(Refresh)
+	if not ok and not strip.told then strip.told = true geterrorhandler()(err) end
+end)
+
+Refresh = function()
 	strip:SetAlpha(Level())
 	local pu = PageUnit()
 	local bar = pu and pu.activeBar
 	for _, side in ipairs({ "left", "right" }) do
 		local cluster = bar and (side == "left" and bar.Left or bar.Right)
 		for _, t in ipairs(tiles[side]) do
-			Mirror(t, cluster and cluster["ActionButton" .. t.native])
+			pcall(Mirror, t, cluster and cluster["ActionButton" .. t.native])
 		end
 		local native = pu and (side == "left" and pu.LeftClassAction or pu.RightClassAction)
 		local on = native ~= nil and native:IsShown() and Show("class")
 		class[side]:SetShown(on)
-		if on then Mirror(class[side], native) end
+		if on then pcall(Mirror, class[side], native) end
 		local prompt = pu and (side == "left" and pu.LeftInputPrompt or pu.RightInputPrompt)
 		local promptOn = on and Show("prompts")
 		prompts[side]:SetShown(promptOn)
-		if promptOn and prompt then Clone(prompts[side], prompt) end
+		if promptOn and prompt then pcall(Clone, prompts[side], prompt) end
 		shoulders[side]:SetShown(Show("shoulders"))
 		if Show("shoulders") then
 			local k = pu and pu:GetEffectiveScale() / strip:GetEffectiveScale() or 1
-			for _, o in ipairs(shoulders[side].layers) do CopyTexture(o, pu and pu[o.key], k) end
+			for _, o in ipairs(shoulders[side].layers) do pcall(CopyTexture, o, pu and pu[o.key], k) end
 		end
 	end
 	if (class.left:IsShown() and class.right:IsShown()) ~= strip.both then Layout() end
@@ -803,7 +811,7 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 	if focus then
 		local k = focus:GetEffectiveScale() / strip:GetEffectiveScale()
 		local _, h = focus:GetSize()
-		CopyTexture(ground, focus, k, (strip.width + 246) / k, h)
+		if not Secret(h) then pcall(CopyTexture, ground, focus, k, (strip.width + 246) / k, h) end
 	else
 		ground:Hide()
 	end
@@ -813,7 +821,7 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 	pcall(PlaceRecent)
 	strip.extrasWait = (strip.extrasWait or 0) - 1
 	if strip.extrasWait <= 0 then strip.extrasWait = 15 PlaceExtras() end
-end)
+end
 
 ------------------------------------------------------------------ on / off
 -- The game's bar hidden (CalmDriver's "skillBar"), ours shown; out of combat only (a secure attribute)

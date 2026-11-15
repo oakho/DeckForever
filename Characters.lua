@@ -17,7 +17,8 @@
 --   * Spoken's subtitles (its window style, per character: DialogueUI's window by default);
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
 -- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
--- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 3); Improved
+-- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 1, by its
+-- "Roue emotes" macro); Improved
 -- Forever's Wheel module on, RB + R3 back to the game's (R3 alone stays the ping).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
@@ -39,10 +40,15 @@ for _, name in ipairs({
 }) do ADDONS_OFF[name] = true end
 
 -- Easy Controller: a button (its "trigger:modifier" key) to what it does, unless the character has its own
--- (LT + paddle 3 (L5, F11): Improved Forever's emote wheel, by its key binding: Easy Controller's own wheels
--- take spells, items and macros, not emotes; a game command on a paddle's layer is bound to its key as it is)
+-- (LT + paddle 1 (L4, F9): Improved Forever's emote wheel. Easy Controller's own wheels take spells, items and
+-- macros, not emotes: a macro of ours clicks the wheel's button ("Macro": it opens it, or closes it if it's up).
+-- A macro, not the game command: a paddle held with LT doesn't always come with LT's Shift, and only what Easy
+-- Controller routes (spells, items, macros) reads the triggers held; a command waits for SHIFT-F9)
+local EMOTE_MACRO, EMOTE_BODY = "Roue emotes", "/click ImprovedForeverWheel_emotes Macro"
 local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes",
-	["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton" }
+	["TR1:LT"] = "macro:" .. EMOTE_MACRO }
+-- (put by an earlier DeckForever, taken back: the command on LT + paddle 3)
+local EC_GONE = { ["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton" }
 
 local function Print(msg) print("|cff66ccffDeckForever|r : " .. msg) end
 
@@ -256,6 +262,15 @@ local function EasyController()
 	local mapping = ec and ec.db and ec.db.settings and ec.db.settings.mapping
 	if type(mapping) ~= "table" then return end
 	local changed = false
+	-- (the emote wheel's macro, an account one: made once)
+	if GetMacroIndexByName and GetMacroIndexByName(EMOTE_MACRO) == 0 and CreateMacro
+		and select(1, GetNumMacros()) < (MAX_ACCOUNT_MACROS or 120) then
+		pcall(CreateMacro, EMOTE_MACRO, "INV_Misc_QuestionMark", EMOTE_BODY)
+		changed = true
+	end
+	for key, action in pairs(EC_GONE) do
+		if mapping[key] == action then mapping[key] = nil changed = true end
+	end
 	for key, action in pairs(EC_MAPPING) do
 		-- (the table in use is the character's profile's: changed in place, kept at the logout)
 		if mapping[key] == nil then mapping[key] = action changed = true end

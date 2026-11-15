@@ -48,7 +48,7 @@ local function Register()
 		"Celui du jeu : les cases recopiées de la barre manette d'origine.")
 	for _, part in ipairs(ns.SKILL_PARTS or {}) do
 		local setting = Settings.RegisterAddOnSetting(category, "DeckForever_skillShow_" .. part.key, part.key,
-			db.skillShow, Settings.VarType.Boolean, part.label, true)
+			db.skillShow, Settings.VarType.Boolean, part.label, part.key ~= "recent")
 		setting:SetValueChangedCallback(Changed)
 		Settings.CreateCheckbox(category, setting, "Masqué, il ne disparaît que de l'écran : son bouton marche toujours.")
 	end

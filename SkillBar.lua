@@ -54,8 +54,11 @@ ns.SKILL_PARTS = {
 	{ key = "recent", label = "Dernière action de roue (Improved Forever)" },
 	{ key = "ground", label = "Fond sombre" },
 }
+-- (off unless turned on: the wheel slot, whose "R3 twice" doesn't reach it on the Deck)
+local OFF_BY_DEFAULT = { recent = true }
 local function Show(key)
 	local show = DeckForeverDB and DeckForeverDB.skillShow
+	if OFF_BY_DEFAULT[key] then return show and show[key] == true or false end
 	return not (show and show[key] == false)
 end
 local function PageUnit()
@@ -702,10 +705,17 @@ local STICK = { L3 = true, R3 = true }
 -- held, shown while that combo's trigger is held): it stands beside the game's bar, hidden under ours. Put
 -- beside the strip's left end (L3's place, which isn't shown), at the strip's alpha. Improved Forever sets its
 -- place again only when its own choice changes (it remembers it): ours stays. Hidden if turned off.
+local recentHooked
 PlaceRecent = function()
 	local slot = _G.ImprovedForeverRecentSlot
 	if not slot or slot.editing then return end
-	if not Show("recent") then slot:SetAlpha(0) return end
+	-- (off: hidden as it shows, with the strip or without; a plain frame of Improved Forever's)
+	if not recentHooked then
+		recentHooked = true
+		slot:HookScript("OnShow", function(self) if not Show("recent") and not self.editing then self:Hide() end end)
+		if not Show("recent") then slot:Hide() end
+	end
+	if not Show("recent") then slot:Hide() return end
 	local ratio = strip:GetEffectiveScale() / slot:GetEffectiveScale()
 	local _, relative, _, x = slot:GetPoint(1)
 	local want = -(TILE + GAP + 6) * ratio
@@ -856,6 +866,11 @@ function ns.ToggleSkillStyle()
 	Apply()
 	print(("DeckForever : barre horizontale, style %s."):format(Blizzard() and "Blizzard (carrés, ronds)" or "plat"))
 end
+
+-- (the wheel slot hidden from the login, the strip on or not)
+local recentWatch = CreateFrame("Frame")
+recentWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
+recentWatch:SetScript("OnEvent", function() C_Timer.After(1, function() pcall(PlaceRecent) end) end)
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")

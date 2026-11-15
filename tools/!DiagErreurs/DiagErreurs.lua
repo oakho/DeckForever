@@ -571,6 +571,92 @@ function X.party()
   end
 end
 
+-- btn: the game's gamepad bar buttons taken apart (DeckForever's skill bar copies their look): every texture,
+-- mask and font string of a d-pad button and a face button (top bar, LT bar), their size, place from the
+-- button's centre, layer, art, colour (db.btnProbe; run a few seconds after each login / reload)
+X.btn = function()
+  local out = {}
+  local function add(s) out[#out + 1] = s end
+  local function num(v) return type(v) == "number" and ("%.1f"):format(v) or tostring(v) end
+  local function region(r, bx, by, depth)
+    local ok, line = pcall(function()
+      local kind = r:GetObjectType()
+      local cx, cy = r:GetCenter()
+      local w, h = r:GetSize()
+      local layer, sub = "", ""
+      if r.GetDrawLayer then layer, sub = r:GetDrawLayer() end
+      local parts = { ("%s%s"):format(("  "):rep(depth), kind), "key=" .. tostring(r.GetParentKey and r:GetParentKey()),
+        "name=" .. tostring(r:GetName()), "shown=" .. tostring(r:IsShown()), "layer=" .. tostring(layer) .. ":" .. tostring(sub),
+        "size=" .. num(w) .. "x" .. num(h), "off=" .. num(cx and bx and cx - bx) .. "," .. num(cy and by and cy - by),
+        "alpha=" .. num(r:GetAlpha()), "pts=" .. tostring(r:GetNumPoints()) }
+      if kind == "Texture" or kind == "MaskTexture" then
+        parts[#parts + 1] = "atlas=" .. tostring(r.GetAtlas and r:GetAtlas())
+        parts[#parts + 1] = "tex=" .. tostring(r:GetTexture())
+        if r.GetBlendMode then parts[#parts + 1] = "blend=" .. tostring(r:GetBlendMode()) end
+        if r.GetVertexColor then local cr, cg, cb, ca = r:GetVertexColor() parts[#parts + 1] = "col=" .. num(cr) .. "/" .. num(cg) .. "/" .. num(cb) .. "/" .. num(ca) end
+        if r.GetTexCoord then parts[#parts + 1] = "tc=" .. table.concat((function() local t = {} for _, v in ipairs({ r:GetTexCoord() }) do t[#t + 1] = num(v) end return t end)(), ",") end
+        if r.GetRotation then parts[#parts + 1] = "rot=" .. num(r:GetRotation()) end
+        if r.GetNumMaskTextures then
+          for i = 1, r:GetNumMaskTextures() do
+            local m = r:GetMaskTexture(i)
+            local mw, mh = m:GetSize()
+            parts[#parts + 1] = "mask" .. i .. "=" .. tostring(m.GetAtlas and m:GetAtlas()) .. "|" .. tostring(m:GetTexture()) .. "|" .. num(mw) .. "x" .. num(mh)
+          end
+        end
+      elseif kind == "FontString" then
+        local font, size, flags = r:GetFont()
+        parts[#parts + 1] = "font=" .. tostring(font) .. "|" .. num(size) .. "|" .. tostring(flags) .. " text=" .. tostring(r:GetText())
+      elseif r.GetFrameLevel then
+        parts[#parts + 1] = "level=" .. tostring(r:GetFrameLevel()) .. " scale=" .. num(r:GetScale())
+      end
+      return table.concat(parts, " ")
+    end)
+    add(ok and line or ("  err " .. tostring(line)))
+  end
+  local function walk(f, bx, by, depth)
+    for _, r in ipairs({ f:GetRegions() }) do region(r, bx, by, depth) end
+    if depth < 3 then
+      for _, c in ipairs({ f:GetChildren() }) do
+        region(c, bx, by, depth)
+        walk(c, bx, by, depth + 1)
+      end
+    end
+  end
+  local pu = GamepadMainActionBarFrame and GamepadMainActionBarFrame.PageUnit
+  local bars = pu and pu.actionBars or {}
+  for _, spec in ipairs({ { "top", bars.topBar }, { "left", bars.leftBar } }) do
+    local bar = spec[2]
+    for _, side in ipairs({ "Left", "Right" }) do
+      local b = bar and bar[side] and bar[side].ActionButton1
+      if b then
+        local bx, by = b:GetCenter()
+        local w, h = b:GetSize()
+        add(("== %s.%s.ActionButton1 %s size=%sx%s eff=%s scale=%s"):format(spec[1], side, tostring(b:GetName()), num(w), num(h), num(b:GetEffectiveScale()), num(b:GetScale())))
+        walk(b, bx, by, 1)
+      end
+    end
+  end
+  if pu then
+    local cluster = bars.topBar and bars.topBar.Right
+    if cluster then
+      local cx, cy = cluster:GetCenter()
+      for i = 1, 4 do
+        local b = cluster["ActionButton" .. i]
+        local x, y = b:GetCenter()
+        add(("face %d off=%s,%s"):format(i, num(x - cx), num(y - cy)))
+      end
+    end
+    add("UIParent eff=" .. num(UIParent:GetEffectiveScale()))
+  end
+  db.btnProbe = out
+  print("dgx btn: " .. #out .. " lines (saved at the next reload)")
+end
+do
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  f:SetScript("OnEvent", function() C_Timer.After(4, function() pcall(X.btn) end) end)
+end
+
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
 -- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload, HOME = /dgx party. Override bindings, out of combat.
 do

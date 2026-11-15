@@ -122,6 +122,21 @@ local function Tile(size, shape)
 	t.edge:Hide()
 	t.count = over:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	t.count:SetPoint("BOTTOMRIGHT", -2, 2)
+	-- (the game's look: copies of its button's layers, at its scale; Clone)
+	t.canvas = CreateFrame("Frame", nil, t)
+	t.canvas:SetSize(1, 1)
+	t.canvas:SetPoint("CENTER")
+	t.canvas:Hide()
+	t.ccd = CreateFrame("Cooldown", nil, t.canvas, "CooldownFrameTemplate")
+	t.ccd:SetPoint("CENTER")
+	t.ccd:SetDrawEdge(false)
+	t.ccd:SetSwipeColor(0, 0, 0, 0.7)
+	t.canvasTop = CreateFrame("Frame", nil, t)
+	t.canvasTop:SetSize(1, 1)
+	t.canvasTop:SetPoint("CENTER")
+	t.canvasTop:SetFrameLevel(t.ccd:GetFrameLevel() + 3)
+	t.canvasTop:Hide()
+	t.clones, t.masks = {}, {}
 	return t
 end
 
@@ -131,33 +146,22 @@ local function Blizzard() return DeckForeverDB and DeckForeverDB.skillStyle == "
 local function Restyle(t)
 	local size = t:GetWidth()
 	if Blizzard() then
-		local slot = "gamepad-actionbar-" .. (t.shape == "circle" and "circleslot" or "squareslot")
-		t.atlas = { normal = slot .. "-border-normal", pressed = slot .. "-border-pressed",
-			proc = slot .. "-border-selected" }
+		-- (the game's look: all drawn by the copies, Clone; ours hidden)
+		t.atlas = nil
 		t:SetBackdrop(nil)
-		t.slotBg:SetAtlas(slot .. "-bg")
-		t.slotBg:SetSize(size, size)
-		t.slotBg:Show()
-		t.slotBorder:SetAtlas(t.atlas.normal)
-		t.slotBorder:SetSize(size * SLOT_BORDER, size * SLOT_BORDER)
-		t.slotBorder:Show()
-		t.mask:SetAtlas(t.shape == "circle" and "CircleMask" or "SquareMask")
-		t.icon:ClearAllPoints()
-		t.icon:SetPoint("CENTER")
-		t.icon:SetSize(size * 0.94, size * 0.94)
-		if not t.masked then t.icon:AddMaskTexture(t.mask) t.lit:AddMaskTexture(t.mask) t.masked = true end
-		t.cooldown:ClearAllPoints()
-		t.cooldown:SetPoint("CENTER")
-		t.cooldown:SetSize(size * 0.94, size * 0.94)
-		if t.shape == "circle" then
-			t.cooldown:SetSwipeTexture(ROUND_MASK)
-			if t.cooldown.SetUseCircularEdge then t.cooldown:SetUseCircularEdge(true) end
-		else
-			t.cooldown:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
-			if t.cooldown.SetUseCircularEdge then t.cooldown:SetUseCircularEdge(false) end
-		end
-		t.cooldown:SetSwipeColor(0, 0, 0, 0.7)
+		for _, part in ipairs({ t.slotBg, t.slotBorder, t.icon, t.halo, t.lit, t.count }) do part:Hide() end
+		t.edge:Hide()
+		t.cooldown:Clear()
+		t.cooldown:Hide()
+		if t.glyph then t.glyph:Hide() end
+		t.pressedLook, t.iconSymbol, t.mirrored, t.nativeNow, t.seen = nil, nil, nil, nil, nil
+		return
 	else
+		t.canvas:Hide()
+		t.canvasTop:Hide()
+		for _, part in ipairs({ t.icon, t.lit, t.count }) do part:Show() end
+		t.cooldown:Show()
+		if t.glyph then t.glyph:Show() end
 		t.atlas = nil
 		t:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
 		t:SetBackdropColor(0, 0, 0, 0.55)
@@ -238,8 +242,6 @@ end
 
 local function Layout()
 	local mode = Mode()
-	-- (the game's slot border stands out of its tile: the gap grows by it, so the borders don't touch)
-	local GAP = Blizzard() and GAP + math.ceil(TILE * (SLOT_BORDER - 1)) or GAP
 	local room = mode == "round" and ROUND_ROOM or PLAIN_ROOM
 	local group = 4 * TILE + 3 * GAP
 	for i, t in ipairs(tiles.left) do
@@ -296,7 +298,187 @@ local function IconAs(t, symbol)
 	t.icon:SetSize(size, size)
 end
 
+------------------------------------------------------------------ the game's look, copied (style "blizzard")
+-- A tile in the game's look is a copy of the button it mirrors, layer by layer: every texture of the game's
+-- button (its shadow, its slot art with the button's symbol in it while empty, its icon and the mask that
+-- cuts it, its normal / pushed / checked borders, its flash, the small glyph in its corner), its count, read
+-- as they are each time (shown, atlas or file, size, place from the button's centre, layer, colour, blend),
+-- drawn on a canvas at the game's button's scale: the same picture, whatever state the game puts it in.
+-- Its cooldown: ours, the game's size, swept in the slot's shape. Left out: the mouse's highlights.
+local CLONE_SKIP = { HighlightTexture = true, QuickKeybindHighlightTexture = true, NewActionTexture = true,
+	LevelLinkLockIcon = true, Arrow = true, BorderShadow = true }
+local parts = setmetatable({}, { __mode = "k" })
+local function Parts(native)
+	local list = parts[native]
+	if list then return list end
+	list = {}
+	local function take(frame, prefix, top)
+		for i, r in ipairs({ frame:GetRegions() }) do
+			local kind = r:GetObjectType()
+			local key = r.GetParentKey and r:GetParentKey()
+			if (kind == "Texture" or kind == "FontString") and not CLONE_SKIP[key or ""] then
+				list[#list + 1] = { region = r, id = prefix .. (key or ("#" .. i)), kind = kind, top = top }
+			end
+		end
+	end
+	take(native, "", false)
+	-- (the corner glyph and the count stand over the cooldown, as the game's do)
+	if native.ButtonIcon then take(native.ButtonIcon, "ButtonIcon.", true) end
+	if native.TextOverlayContainer then take(native.TextOverlayContainer, "Text.", true) end
+	parts[native] = list
+	return list
+end
+
+local function CloneOf(t, part)
+	local o = t.clones[part.id]
+	if o then return o end
+	local layer, sub = part.region:GetDrawLayer()
+	local host = part.top and t.canvasTop or t.canvas
+	if part.kind == "FontString" then
+		o = host:CreateFontString(nil, layer)
+	else
+		o = host:CreateTexture(nil, layer, nil, sub)
+	end
+	t.clones[part.id] = o
+	return o
+end
+
+-- the mask the game's region shows with (its visible one), ours of the same art and size
+local function MaskOf(t, r)
+	if not r.GetNumMaskTextures then return nil end
+	for i = 1, r:GetNumMaskTextures() do
+		local m = r:GetMaskTexture(i)
+		local w = m and m:GetWidth()
+		if m and m:IsShown() and w and w > 0 then
+			local art = m:GetAtlas() or m:GetTexture()
+			local key = tostring(art)
+			local ours = t.masks[key]
+			if not ours then
+				ours = t.canvas:CreateMaskTexture()
+				if m:GetAtlas() then ours:SetAtlas(m:GetAtlas()) else ours:SetTexture(m:GetTexture(), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE") end
+				t.masks[key] = ours
+			end
+			return ours, m, key
+		end
+	end
+end
+
+local function SyncPart(t, part, nx, ny)
+	local r = part.region
+	local o = CloneOf(t, part)
+	if not r:IsVisible() then
+		if o:IsShown() then o:Hide() end
+		return
+	end
+	o:Show()
+	local cx, cy = r:GetCenter()
+	local w, h = r:GetSize()
+	local place = cx and ("%.1f:%.1f:%.1f:%.1f"):format(cx - nx, cy - ny, w, h) or "c"
+	if o.place ~= place then
+		o.place = place
+		o:ClearAllPoints()
+		o:SetPoint("CENTER", t.canvas, "CENTER", cx and cx - nx or 0, cy and cy - ny or 0)
+		o:SetSize(w, h)
+	end
+	if part.kind == "FontString" then
+		o:SetFont(r:GetFont())
+		o:SetTextColor(r:GetTextColor())
+		o:SetShadowOffset(r:GetShadowOffset())
+		o:SetText(r:GetText())
+		return
+	end
+	local atlas = r:GetAtlas()
+	if atlas then
+		if o.art ~= atlas then o.art = atlas o:SetAtlas(atlas) o:SetSize(w, h) end
+	else
+		local file = r:GetTexture()
+		if o.art ~= file then o.art = file o:SetTexture(file) end
+		o:SetTexCoord(r:GetTexCoord())
+	end
+	o:SetVertexColor(r:GetVertexColor())
+	o:SetAlpha(r:GetAlpha())
+	o:SetBlendMode(r:GetBlendMode())
+	o:SetDesaturated(r:IsDesaturated())
+	if r.GetRotation then o:SetRotation(r:GetRotation()) end
+	-- its mask
+	local mask, theirs, key = MaskOf(t, r)
+	if o.maskKey ~= key then
+		if o.mask then o:RemoveMaskTexture(o.mask) end
+		o.mask, o.maskKey = mask, key
+		if mask then o:AddMaskTexture(mask) end
+	end
+	if mask then
+		local mx, my = theirs:GetCenter()
+		mask:ClearAllPoints()
+		mask:SetPoint("CENTER", t.canvas, "CENTER", mx and mx - nx or 0, my and my - ny or 0)
+		mask:SetSize(theirs:GetSize())
+		if part.id == "icon" or part.id == "SpecialActionIcon" then t.round = key:find("Circle") ~= nil end
+	end
+end
+
+local function CooldownOf(cd, t, native)
+	local action = native.action
+	if not action then return end
+	local start, duration
+	if C_ActionBar and C_ActionBar.GetActionCooldown then
+		local ok, info = pcall(C_ActionBar.GetActionCooldown, action)
+		if ok and type(info) == "table" then start, duration = info.startTime, info.duration end
+	elseif GetActionCooldown then
+		local ok, s, d = pcall(GetActionCooldown, action)
+		if ok then start, duration = s, d end
+	end
+	if Secret(start) or Secret(duration) then
+		pcall(cd.SetCooldown, cd, start, duration)
+		t.cdKey = nil
+	elseif type(start) == "number" and type(duration) == "number" and duration > 1.5 then
+		local key = start .. ":" .. duration
+		if t.cdKey ~= key then t.cdKey = key cd:SetCooldown(start, duration) end
+	elseif t.cdKey then
+		t.cdKey = nil
+		cd:Clear()
+	end
+end
+
+local function Clone(t, native)
+	local shown = native and native:IsShown()
+	t.canvas:SetShown(shown and true or false)
+	t.canvasTop:SetShown(shown and true or false)
+	if not shown then return end
+	if t.mirrored ~= native then
+		-- (another button: every copy laid out again)
+		t.nativeNow = native
+		for _, o in pairs(t.clones) do o:Hide() o.place, o.art = nil, nil end
+		t.cdKey = nil
+		t.ccd:Clear()
+	end
+	local k = native:GetEffectiveScale() / t:GetEffectiveScale()
+	if math.abs(t.canvas:GetScale() - k) > 0.001 then t.canvas:SetScale(k) t.canvasTop:SetScale(k) end
+	local nx, ny = native:GetCenter()
+	if not nx then return end
+	for _, part in ipairs(Parts(native)) do pcall(SyncPart, t, part, nx, ny) end
+	-- (ours drawn for the game's: the copies it made for the button ours mirrored before, hidden)
+	if t.nativeNow ~= t.seen then
+		t.seen = t.nativeNow
+		local live = {}
+		for _, part in ipairs(Parts(native)) do live[part.id] = true end
+		for id, o in pairs(t.clones) do if not live[id] then o:Hide() end end
+	end
+	local cd = native.cooldown
+	if cd then
+		local w, h = cd:GetSize()
+		t.ccd:SetSize(w, h)
+		local shape = t.round and "round" or "square"
+		if t.ccdShape ~= shape then
+			t.ccdShape = shape
+			t.ccd:SetSwipeTexture(t.round and ROUND_MASK or "Interface\\Buttons\\WHITE8x8")
+			if t.ccd.SetUseCircularEdge then t.ccd:SetUseCircularEdge(t.round) end
+		end
+	end
+	CooldownOf(t.ccd, t, native)
+end
+
 local function Mirror(t, native)
+	if Blizzard() then Clone(t, native) t.mirrored = native return end
 	local shown = native and native:IsShown()
 	local icon = shown and native.icon
 	local texture = icon and icon:IsShown() and icon:GetTexture()

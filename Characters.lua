@@ -18,7 +18,7 @@
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
 -- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
 -- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 1, by its
--- "Roue emotes" macro); Improved
+-- "Roue emotes" macro), Improved Forever's peek map (paddle 3, alone or with LT); Improved
 -- Forever's Wheel module on, RB + R3 back to the game's (R3 alone stays the ping).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
@@ -45,8 +45,13 @@ for _, name in ipairs({
 -- A macro, not the game command: a paddle held with LT doesn't always come with LT's Shift, and only what Easy
 -- Controller routes (spells, items, macros) reads the triggers held; a command waits for SHIFT-F9)
 local EMOTE_MACRO, EMOTE_BODY = "Roue emotes", "/click ImprovedForeverWheel_emotes Macro"
+-- (LT + paddle 3 (L5, F11): Improved Forever's peek map, shown while held: the game command clicking its
+-- hold button (press opens, release closes). A macro gets no release (Easy Controller's router passes one
+-- only to its wheels), and a command waits for its exact key: LT + paddle may come without Shift, so the
+-- paddle alone has it too (it was free))
+local PEEK = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton"
 local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes",
-	["TR1:LT"] = "macro:" .. EMOTE_MACRO }
+	["TR1:LT"] = "macro:" .. EMOTE_MACRO, ["TR3:"] = PEEK, ["TR3:LT"] = PEEK }
 -- (put by an earlier DeckForever, taken back: the command on LT + paddle 3)
 local EC_GONE = { ["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton" }
 

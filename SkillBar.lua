@@ -9,10 +9,11 @@
 -- the strip is on. Ours mirrors the buttons of whichever bar the game has active (its top one, LT's, RT's,
 -- LT + RT's, or one standing in: a vehicle's...): the tiles change in place as a trigger is held, four pips
 -- under the gap saying which page is up. Its two class actions (L1 + L2, R1 + R2) over the strip's ends.
--- Read a few dozen times a second: only getters on the game's frames, nothing set, nothing hooked.
+-- Read a few dozen times a second: only getters on the game's frames, nothing set, nothing hooked. Its other parts
+-- too (LB / RB's targeting marks, the class actions' prompts, its dark ground), and Easy Controller's L3 / R3 beside
+-- the strip's ends.
 -- Shown as the game's bar would be (CalmDriver's state: full in a fight, out of one only while woken).
--- /df skill: off -> round -> gap -> off (DeckForeverDB.skillBar). Easy Controller's paddles, which follow the
--- game's bar's alpha, are hidden with it while the strip is on.
+-- /df skill: off -> round -> gap -> off (DeckForeverDB.skillBar).
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -81,6 +82,7 @@ end
 local SLOT_BORDER = 64 / 46 / 1.2       -- (the slot's border art round its visible side: Improved Forever's
                                         -- sizes, its tile's visible side 1.2 of its size)
 local ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+local Canvas
 local function Tile(size, shape)
 	local t = CreateFrame("Frame", nil, strip, "BackdropTemplate")
 	t:SetSize(size, size)
@@ -122,7 +124,11 @@ local function Tile(size, shape)
 	t.edge:Hide()
 	t.count = over:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	t.count:SetPoint("BOTTOMRIGHT", -2, 2)
-	-- (the game's look: copies of its button's layers, at its scale; Clone)
+	Canvas(t)
+	return t
+end
+-- (the game's look: copies of a game's frame's layers, at its scale; Clone)
+function Canvas(t)
 	t.canvas = CreateFrame("Frame", nil, t)
 	t.canvas:SetSize(1, 1)
 	t.canvas:SetPoint("CENTER")
@@ -137,7 +143,6 @@ local function Tile(size, shape)
 	t.canvasTop:SetFrameLevel(t.ccd:GetFrameLevel() + 3)
 	t.canvasTop:Hide()
 	t.clones, t.masks = {}, {}
-	return t
 end
 
 local function Blizzard() return DeckForeverDB and DeckForeverDB.skillStyle == "blizzard" end
@@ -207,6 +212,56 @@ for _, side in ipairs({ "left", "right" }) do
 end
 local class = { left = Tile(CLASS, "circle"), right = Tile(CLASS, "circle") }
 
+-- The game's bar's other parts, copied as they are (the game's look in either style):
+-- * the class actions' glyph prompts (L1 + L2, RB + RT...), over their tile
+local prompts = {}
+for _, side in ipairs({ "left", "right" }) do
+	local f = CreateFrame("Frame", nil, strip)
+	f:SetSize(1, 1)
+	Canvas(f)
+	f.deep = true
+	prompts[side] = f
+end
+-- * LB / RB's ally / enemy targeting marks (their background, icon, pressed light), over the strip's ends
+local SHOULDERS = {
+	left = { "LeftShoulderBackground", "LeftShoulderIcon", "LeftShoulderHighlight" },
+	right = { "RightShoulderBackground", "RightShoulderIcon", "RightShoulderHighlight" },
+}
+local shoulders = {}
+for _, side in ipairs({ "left", "right" }) do
+	local f = CreateFrame("Frame", nil, strip)
+	f:SetSize(1, 1)
+	f.layers = {}
+	for i, key in ipairs(SHOULDERS[side]) do
+		f.layers[i] = f:CreateTexture(nil, "ARTWORK", nil, i)
+		f.layers[i]:SetPoint("CENTER")
+		f.layers[i].key = key
+	end
+	shoulders[side] = f
+end
+-- * the soft dark ground behind the buttons (the active bar's BackgroundFocus), the strip's width
+local ground = strip:CreateTexture(nil, "BACKGROUND", nil, -8)
+ground:SetPoint("CENTER")
+
+-- One of the game's textures, copied onto ours (shown, art, size times k, colour)
+local function CopyTexture(o, r, k, w, h)
+	if not (r and r:IsVisible()) then o:Hide() return end
+	o:Show()
+	local atlas = r:GetAtlas()
+	if atlas then
+		if o.art ~= atlas then o.art = atlas o:SetAtlas(atlas) end
+	else
+		local file = r:GetTexture()
+		if o.art ~= file then o.art = file o:SetTexture(file) end
+		o:SetTexCoord(r:GetTexCoord())
+	end
+	local rw, rh = r:GetSize()
+	o:SetSize((w or rw) * k, (h or rh) * k)
+	o:SetVertexColor(r:GetVertexColor())
+	o:SetAlpha(r:GetAlpha())
+	o:SetBlendMode(r:GetBlendMode())
+end
+
 -- the round (AishCore's look: a dark disc, its ring an arc; here your health's, full round)
 local round = CreateFrame("Frame", nil, strip)
 round:SetSize(ROUND, ROUND)
@@ -252,10 +307,20 @@ local function Layout()
 		t:ClearAllPoints()
 		t:SetPoint("LEFT", strip, "CENTER", room / 2 + (i - 1) * (TILE + GAP), 0)
 	end
-	class.left:ClearAllPoints()
-	class.left:SetPoint("BOTTOMLEFT", tiles.left[1], "TOPLEFT", 0, M)
-	class.right:ClearAllPoints()
-	class.right:SetPoint("BOTTOMRIGHT", tiles.right[4], "TOPRIGHT", 0, M)
+	-- (the class actions over the middle, as the game has them between its two groups; their prompts over them)
+	local both = class.left:IsShown() and class.right:IsShown()
+	for side, sign in pairs({ left = -1, right = 1 }) do
+		local x = both and sign * (CLASS / 2 + 6) or 0
+		class[side]:ClearAllPoints()
+		class[side]:SetPoint("CENTER", strip, "CENTER", x, TILE / 2 + CLASS / 2 + 14)
+		prompts[side]:ClearAllPoints()
+		prompts[side]:SetPoint("CENTER", class[side], "CENTER", 0, CLASS / 2 + 12)
+	end
+	shoulders.left:ClearAllPoints()
+	shoulders.left:SetPoint("CENTER", tiles.left[1], "CENTER", 0, TILE / 2 + 26)
+	shoulders.right:ClearAllPoints()
+	shoulders.right:SetPoint("CENTER", tiles.right[4], "CENTER", 0, TILE / 2 + 26)
+	strip.both = both
 	round:SetShown(mode == "round")
 	for i, p in ipairs(pips) do
 		p:ClearAllPoints()
@@ -308,7 +373,7 @@ end
 local CLONE_SKIP = { HighlightTexture = true, QuickKeybindHighlightTexture = true, NewActionTexture = true,
 	LevelLinkLockIcon = true, Arrow = true, BorderShadow = true }
 local parts = setmetatable({}, { __mode = "k" })
-local function Parts(native)
+local function Parts(native, deep)
 	local list = parts[native]
 	if list then return list end
 	list = {}
@@ -318,6 +383,12 @@ local function Parts(native)
 			local key = r.GetParentKey and r:GetParentKey()
 			if (kind == "Texture" or kind == "FontString") and not CLONE_SKIP[key or ""] then
 				list[#list + 1] = { region = r, id = prefix .. (key or ("#" .. i)), kind = kind, top = top }
+			end
+		end
+		-- (a whole frame's, as a glyph prompt's: its children's too)
+		if deep then
+			for i, c in ipairs({ frame:GetChildren() }) do
+				take(c, prefix .. ((c.GetParentKey and c:GetParentKey()) or ("#" .. i)) .. ".", top)
 			end
 		end
 	end
@@ -446,7 +517,7 @@ local function Clone(t, native)
 	if not shown then return end
 	if t.mirrored ~= native then
 		-- (another button: every copy laid out again)
-		t.nativeNow = native
+		t.mirrored, t.nativeNow = native, native
 		for _, o in pairs(t.clones) do o:Hide() o.place, o.art = nil, nil end
 		t.cdKey = nil
 		t.ccd:Clear()
@@ -455,12 +526,12 @@ local function Clone(t, native)
 	if math.abs(t.canvas:GetScale() - k) > 0.001 then t.canvas:SetScale(k) t.canvasTop:SetScale(k) end
 	local nx, ny = native:GetCenter()
 	if not nx then return end
-	for _, part in ipairs(Parts(native)) do pcall(SyncPart, t, part, nx, ny) end
+	for _, part in ipairs(Parts(native, t.deep)) do pcall(SyncPart, t, part, nx, ny) end
 	-- (ours drawn for the game's: the copies it made for the button ours mirrored before, hidden)
 	if t.nativeNow ~= t.seen then
 		t.seen = t.nativeNow
 		local live = {}
-		for _, part in ipairs(Parts(native)) do live[part.id] = true end
+		for _, part in ipairs(Parts(native, t.deep)) do live[part.id] = true end
 		for id, o in pairs(t.clones) do if not live[id] then o:Hide() end end
 	end
 	local cd = native.cooldown
@@ -600,6 +671,46 @@ local function Level()
 	return driver and tonumber(driver:GetAttribute("state-awake")) or 0
 end
 
+------------------------------------------------------------------ Easy Controller's extra buttons
+-- L3 / R3 and its paddles' and touchpad's buttons with something on them, which it draws round the game's bar
+-- (its Paddles.lua: plain frames, at the bar's alpha): beside the strip's two ends while it's on, at the
+-- strip's alpha (set right after its own, in the same frame: no flicker), each side's outwards in its order.
+-- Put back where Easy Controller places them once the strip is off; left alone while being placed in its options.
+local EC_SIDES = { left = { "L3", "L4", "L5", "TL1", "TL2", "TL3", "TL4" },
+	right = { "R3", "R4", "R5", "TR1", "TR2", "TR3", "TR4" } }
+local ecHooked, ecMoved
+local function PlaceExtras()
+	local P = rawget(_G, "ControllerKeyboard") and ControllerKeyboard.Paddles
+	local f = P and P.frame
+	if not (f and f.buttons) then return end
+	if not ecHooked then
+		ecHooked = true
+		f:HookScript("OnUpdate", function()
+			if strip:IsShown() and not P.placing then f:SetAlpha(strip:GetAlpha()) end
+		end)
+	end
+	if not strip:IsShown() then
+		if ecMoved then ecMoved = nil pcall(P.Layout, P) end
+		return
+	end
+	if P.placing then return end
+	ecMoved = true
+	for side, ids in pairs(EC_SIDES) do
+		local sign = side == "left" and -1 or 1
+		local edge = side == "left" and tiles.left[1] or tiles.right[4]
+		local n = 0
+		for _, id in ipairs(ids) do
+			local b = f.buttons[id]
+			if b and b:IsShown() and b:GetAlpha() > 0 then
+				n = n + 1
+				local ratio = strip:GetEffectiveScale() / b:GetEffectiveScale()
+				b:ClearAllPoints()
+				b:SetPoint("CENTER", edge, "CENTER", sign * n * (TILE + GAP + 4) * ratio, 0)
+			end
+		end
+	end
+end
+
 local tick = 0
 strip:SetScript("OnUpdate", function(_, elapsed)
 	tick = tick + elapsed
@@ -617,9 +728,25 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 		local on = native ~= nil and native:IsShown()
 		class[side]:SetShown(on)
 		if on then Mirror(class[side], native) end
+		local prompt = pu and (side == "left" and pu.LeftInputPrompt or pu.RightInputPrompt)
+		prompts[side]:SetShown(on)
+		if on and prompt then Clone(prompts[side], prompt) end
+		local k = pu and pu:GetEffectiveScale() / strip:GetEffectiveScale() or 1
+		for _, o in ipairs(shoulders[side].layers) do CopyTexture(o, pu and pu[o.key], k) end
+	end
+	if (class.left:IsShown() and class.right:IsShown()) ~= strip.both then Layout() end
+	local focus = bar and bar.BackgroundFocus
+	if focus then
+		local k = focus:GetEffectiveScale() / strip:GetEffectiveScale()
+		local _, h = focus:GetSize()
+		CopyTexture(ground, focus, k, (strip.width + 246) / k, h)
+	else
+		ground:Hide()
 	end
 	if pu then Pips(pu, bar) end
 	if round:IsShown() then Health() end
+	strip.extrasWait = (strip.extrasWait or 0) - 1
+	if strip.extrasWait <= 0 then strip.extrasWait = 15 PlaceExtras() end
 end)
 
 ------------------------------------------------------------------ on / off
@@ -640,6 +767,7 @@ local function Apply()
 	Layout()
 	SetGlyphs()
 	strip:SetShown(mode ~= nil)
+	PlaceExtras()
 end
 ns.ApplySkillBar = Apply
 

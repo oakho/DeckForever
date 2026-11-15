@@ -17,7 +17,8 @@
 --   * Spoken's subtitles (its window style, per character: DialogueUI's window by default);
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
 -- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
--- (paddle 4), the "Quêtes" macro (LT + paddle 4).
+-- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 3); Improved
+-- Forever's Wheel module on, RB + R3 back to the game's (R3 alone stays the ping).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
 
@@ -31,14 +32,17 @@ local ADDONS_OFF = {}
 for _, name in ipairs({
 	"ControllerForever", "Ding", "OpenMap", "QuestMaster", "TomTom", "!Swatter", "!ImprovedErrorFrame",
 	"HorizonSuite", "RXPGuides", "NiceDamage", "Syndicator", "Polestar", "Lorewalker", "Interaction",
-	"ImprovedForever_Wheel", "FUI-RestedXP",
+	"FUI-RestedXP",
 	"EllesmereUIActionBars", "EllesmereUIAuraBuffReminders", "EllesmereUIBags", "EllesmereUIBlizzardSkin",
 	"EllesmereUIChat", "EllesmereUICooldownManager", "EllesmereUIDamageMeters", "EllesmereUINameplates",
 	"EllesmereUIQuestTracker", "EllesmereUIFriends", "EllesmereUIGroupFinder", "EllesmereUIMythicTimer",
 }) do ADDONS_OFF[name] = true end
 
 -- Easy Controller: a button (its "trigger:modifier" key) to what it does, unless the character has its own
-local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes" }
+-- (LT + paddle 3 (L5, F11): Improved Forever's emote wheel, by its key binding: Easy Controller's own wheels
+-- take spells, items and macros, not emotes; a game command on a paddle's layer is bound to its key as it is)
+local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes",
+	["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton" }
 
 local function Print(msg) print("|cff66ccffDeckForever|r : " .. msg) end
 
@@ -259,6 +263,25 @@ local function EasyController()
 	if changed then ns.NeedReload("roues Easy Controller") end
 end
 
+-- Improved Forever's wheels (its Wheel module, on for every character: the emote wheel on LT + paddle 3)
+-- without R3 taken: a wheel on a combo whose button makes no modifier (RB + R3) makes it take R3 alone,
+-- and R3 alone is the game's ping (it can't run it for it): that combo back to the game's (account-wide)
+local WHEEL = "ImprovedForever_Wheel"
+local function Wheels()
+	local guid = UnitGUID("player")
+	local okState, state = pcall(C_AddOns.GetAddOnEnableState, WHEEL, guid)
+	if okState and (state or 0) == 0 and C_AddOns.GetAddOnInfo(WHEEL) then
+		C_AddOns.EnableAddOn(WHEEL, guid)
+		ns.NeedReload("roues Improved Forever")
+	end
+	local db = rawget(_G, "ImprovedForeverDB")
+	if type(db) == "table" and type(db.combos) == "table" and db.combos.R1 and db.combos.R1 ~= "native" then
+		db.combos.R1 = "native"
+		local IF = rawget(_G, "ImprovedForever")
+		if IF and IF.ApplyRingBindings then pcall(IF.ApplyRingBindings) end
+	end
+end
+
 local function CharacterSettings()
 	local gb = rawget(_G, "GlowingBarsCharDB")
 	if type(gb) == "table" and gb.isAfkRainbowOn ~= true then gb.isAfkRainbowOn = true ns.NeedReload("GlowingBars") end
@@ -290,7 +313,7 @@ local function Run()
 	if InCombatLockdown() then return false end
 	if DeckForeverDB.testStrip then DeckForeverDB.testStrip = nil ns.NeedReload("test") end
 	-- (Easy Controller's bindings at each login, only the ones a character lacks: new ones reach every character)
-	for _, step in ipairs({ Profiles, Placements, EasyController, NewCharacter }) do
+	for _, step in ipairs({ Profiles, Placements, EasyController, Wheels, NewCharacter }) do
 		local ok, err = pcall(step)
 		if not ok then Print(tostring(err)) end
 	end

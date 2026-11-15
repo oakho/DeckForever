@@ -74,42 +74,120 @@ local function SetGlyphs()
 	end
 end
 
-local function Tile(size)
+-- Two looks (DeckForeverDB.skillStyle, /df style): "flat" (a dark square, a thin edge) or "blizzard" (the
+-- game's own gamepad bar slots: its square slot for the d-pad, its round one for the face buttons and the
+-- class actions; background, border, pressed border, the icon cut by the slot's mask, as Improved Forever
+-- draws its pad from them)
+local SLOT_BORDER = 64 / 46 / 1.2       -- (the slot's border art round its visible side: Improved Forever's
+                                        -- sizes, its tile's visible side 1.2 of its size)
+local ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+local function Tile(size, shape)
 	local t = CreateFrame("Frame", nil, strip, "BackdropTemplate")
 	t:SetSize(size, size)
-	t:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
-	t:SetBackdropColor(0, 0, 0, 0.55)
-	t:SetBackdropBorderColor(0, 0, 0, 1)
+	t.shape = shape                     -- ("square" or "circle": its slot in the game's look)
+	t.slotBg = t:CreateTexture(nil, "BACKGROUND")
+	t.slotBg:SetPoint("CENTER")
+	t.slotBg:SetSize(size, size)
 	t.icon = t:CreateTexture(nil, "ARTWORK")
-	t.icon:SetPoint("TOPLEFT", 1, -1)
-	t.icon:SetPoint("BOTTOMRIGHT", -1, 1)
-	t.icon:SetTexCoord(unpack(ICON_CROP))
+	t.mask = t:CreateMaskTexture()
+	t.mask:SetPoint("CENTER")
+	t.mask:SetSize(size * 0.94, size * 0.94)
 	t.cooldown = CreateFrame("Cooldown", nil, t, "CooldownFrameTemplate")
-	t.cooldown:SetAllPoints(t.icon)
 	t.cooldown:SetDrawEdge(false)
 	t.cooldown:SetHideCountdownNumbers(false)
-	-- (lit: toggled on, casting from it; a proc: gold)
-	t.lit = t:CreateTexture(nil, "OVERLAY")
-	t.lit:SetAllPoints(t.icon)
-	t.lit:SetColorTexture(1, 1, 1, 1)
+	-- (lit: toggled on, casting from it)
+	t.lit = t:CreateTexture(nil, "ARTWORK", nil, 2)
+	t.lit:SetColorTexture(1, 0.85, 0.4, 1)
 	t.lit:SetBlendMode("ADD")
 	t.lit:SetAlpha(0)
+	local over = CreateFrame("Frame", nil, t)
+	over:SetAllPoints()
+	over:SetFrameLevel(t.cooldown:GetFrameLevel() + 2)
+	t.slotBorder = over:CreateTexture(nil, "OVERLAY")
+	t.slotBorder:SetPoint("CENTER")
+	t.slotBorder:SetSize(size * SLOT_BORDER, size * SLOT_BORDER)
+	-- (a proc: a gold edge (flat), the slot's selected border (blizzard))
 	t.edge = CreateFrame("Frame", nil, t, "BackdropTemplate")
 	t.edge:SetPoint("TOPLEFT", -1, 1)
 	t.edge:SetPoint("BOTTOMRIGHT", 1, -1)
 	t.edge:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 2 })
 	t.edge:SetBackdropBorderColor(1, 0.82, 0.2, 1)
-	t.edge:SetFrameLevel(t.cooldown:GetFrameLevel() + 2)
+	t.edge:SetFrameLevel(over:GetFrameLevel() + 1)
 	t.edge:Hide()
-	t.count = t.edge:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
-	t.count:SetParent(t)
+	t.count = over:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	t.count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return t
 end
 
+local function Blizzard() return DeckForeverDB and DeckForeverDB.skillStyle == "blizzard" end
+
+-- A tile in the look in use
+local function Restyle(t)
+	local size = t:GetWidth()
+	if Blizzard() then
+		local slot = "gamepad-actionbar-" .. (t.shape == "circle" and "circleslot" or "squareslot")
+		t.atlas = { normal = slot .. "-border-normal", pressed = slot .. "-border-pressed",
+			proc = slot .. "-border-selected" }
+		t:SetBackdrop(nil)
+		t.slotBg:SetAtlas(slot .. "-bg")
+		t.slotBg:SetSize(size, size)
+		t.slotBg:Show()
+		t.slotBorder:SetAtlas(t.atlas.normal)
+		t.slotBorder:SetSize(size * SLOT_BORDER, size * SLOT_BORDER)
+		t.slotBorder:Show()
+		t.mask:SetAtlas(t.shape == "circle" and "CircleMask" or "SquareMask")
+		t.icon:ClearAllPoints()
+		t.icon:SetPoint("CENTER")
+		t.icon:SetSize(size * 0.94, size * 0.94)
+		if not t.masked then t.icon:AddMaskTexture(t.mask) t.lit:AddMaskTexture(t.mask) t.masked = true end
+		t.cooldown:ClearAllPoints()
+		t.cooldown:SetPoint("CENTER")
+		t.cooldown:SetSize(size * 0.94, size * 0.94)
+		if t.shape == "circle" then
+			t.cooldown:SetSwipeTexture(ROUND_MASK)
+			if t.cooldown.SetUseCircularEdge then t.cooldown:SetUseCircularEdge(true) end
+		else
+			t.cooldown:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
+			if t.cooldown.SetUseCircularEdge then t.cooldown:SetUseCircularEdge(false) end
+		end
+		t.cooldown:SetSwipeColor(0, 0, 0, 0.7)
+	else
+		t.atlas = nil
+		t:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+		t:SetBackdropColor(0, 0, 0, 0.55)
+		t:SetBackdropBorderColor(0, 0, 0, 1)
+		t.slotBg:Hide()
+		t.slotBorder:Hide()
+		if t.masked then t.icon:RemoveMaskTexture(t.mask) t.lit:RemoveMaskTexture(t.mask) t.masked = nil end
+		t.icon:ClearAllPoints()
+		t.icon:SetPoint("TOPLEFT", 1, -1)
+		t.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+		t.cooldown:ClearAllPoints()
+		t.cooldown:SetAllPoints(t.icon)
+		t.cooldown:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
+		if t.cooldown.SetUseCircularEdge then t.cooldown:SetUseCircularEdge(false) end
+		t.cooldown:SetSwipeColor(0, 0, 0, 0.7)
+	end
+	t.lit:ClearAllPoints()
+	t.lit:SetAllPoints(t.icon)
+	t.pressedLook = nil
+end
+
+-- pressed and proc shown in the look in use
+local function Pressed(t, pressed, proc)
+	if t.atlas then
+		local want = pressed and t.atlas.pressed or proc and t.atlas.proc or t.atlas.normal
+		if t.pressedLook ~= want then t.pressedLook = want t.slotBorder:SetAtlas(want) end
+		t.edge:Hide()
+	else
+		t:SetBackdropBorderColor(pressed and 1 or 0, pressed and 0.82 or 0, pressed and 0.2 or 0, 1)
+		t.edge:SetShown(proc)
+	end
+end
+
 for _, side in ipairs({ "left", "right" }) do
 	for slot = 1, 4 do
-		local t = Tile(TILE)
+		local t = Tile(TILE, side == "left" and "square" or "circle")
 		t.native = ORDER[slot]
 		t.glyph = Glyph(strip)
 		t.key = KEYS[side][ORDER[slot]]
@@ -117,7 +195,7 @@ for _, side in ipairs({ "left", "right" }) do
 		tiles[side][slot] = t
 	end
 end
-local class = { left = Tile(CLASS), right = Tile(CLASS) }
+local class = { left = Tile(CLASS, "circle"), right = Tile(CLASS, "circle") }
 
 -- the round (AishCore's look: a dark disc, its ring an arc; here your health's, full round)
 local round = CreateFrame("Frame", nil, strip)
@@ -154,6 +232,8 @@ end
 
 local function Layout()
 	local mode = Mode()
+	-- (the game's slot border stands out of its tile: the gap grows by it, so the borders don't touch)
+	local GAP = Blizzard() and GAP + math.ceil(TILE * (SLOT_BORDER - 1)) or GAP
 	local room = mode == "round" and ROUND_ROOM or PLAIN_ROOM
 	local group = 4 * TILE + 3 * GAP
 	for i, t in ipairs(tiles.left) do
@@ -196,7 +276,7 @@ local function Mirror(t, native)
 		t.count:SetText("")
 		t.cooldown:Clear()
 		t.lit:SetAlpha(0)
-		t.edge:Hide()
+		Pressed(t, false, false)
 		t.cdKey = nil
 		return
 	end
@@ -238,9 +318,8 @@ local function Mirror(t, native)
 	local checked = native.GetChecked and native:GetChecked()
 	if not pcall(t.lit.SetAlphaFromBoolean, t.lit, checked, 0.25, 0) then t.lit:SetAlpha(0) end
 	local alert = native.SpellActivationAlert
-	t.edge:SetShown(alert and alert:IsShown() or false)
 	local ok, pressed = pcall(function() return native:GetButtonState() == "PUSHED" end)
-	t:SetBackdropBorderColor(ok and pressed and 1 or 0, ok and pressed and 0.82 or 0, ok and pressed and 0.2 or 0, 1)
+	Pressed(t, ok and pressed or false, alert and alert:IsShown() or false)
 end
 
 local function Pips(pu, bar)
@@ -313,6 +392,10 @@ local function Apply()
 		driver:SetAttribute("skillBar", mode ~= nil)
 		if driver.Execute then driver:Execute([[ self:RunAttribute("apply") ]]) end
 	end
+	for _, side in ipairs({ "left", "right" }) do
+		for _, t in ipairs(tiles[side]) do Restyle(t) end
+		Restyle(class[side])
+	end
 	Layout()
 	SetGlyphs()
 	strip:SetShown(mode ~= nil)
@@ -327,6 +410,14 @@ function ns.CycleSkillBar()
 	Apply()
 	print(("DeckForever : barre horizontale %s."):format(({ round = "avec le rond", gap = "avec un espace",
 		off = "désactivée" })[DeckForeverDB.skillBar]))
+end
+
+function ns.ToggleSkillStyle()
+	DeckForeverDB = DeckForeverDB or {}
+	DeckForeverDB.skillStyle = Blizzard() and "flat" or "blizzard"
+	strip.previewUntil = GetTime() + 6
+	Apply()
+	print(("DeckForever : barre horizontale, style %s."):format(Blizzard() and "Blizzard (carrés, ronds)" or "plat"))
 end
 
 local events = CreateFrame("Frame")

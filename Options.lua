@@ -15,6 +15,8 @@ local function Register()
 	DeckForeverDB = DeckForeverDB or {}
 	local db = DeckForeverDB
 	db.skillShow = db.skillShow or {}
+	-- (the wheel slot's option was made on, its first default: off, once; the player may turn it on again)
+	if not db.recentOffOnce then db.recentOffOnce = true db.skillShow.recent = false end
 	-- (the skill bar's two choices: off is kept as "off", never nil, so the list shows it)
 	if db.skillBar ~= "round" and db.skillBar ~= "gap" then db.skillBar = "off" end
 	if db.skillStyle ~= "flat" then db.skillStyle = "blizzard" end

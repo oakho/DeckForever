@@ -65,7 +65,7 @@ Nothing to type on a new character: at each login DeckForever puts the Deck's in
 - On a character's first login: its addons on or off as the Deck's, Spoken's subtitles, GlowingBars'
   and Lueur's settings.
 - At every login, Easy Controller's bindings a character lacks: the consumables wheel and the *Quêtes*
-  macro (paddle 4, LT + paddle 4), Improved Forever's emote wheel (LT + paddle 1, by a *Roue emotes* macro), its peek map (LT +
+  macro (paddle 4, LT + paddle 4), Improved Forever's emote wheel (d-pad up, F8 in the Steam layout: `Paddles.lua`), its peek map (LT +
   paddle 3, held: `Paddles.lua` reads LT on the pad and keeps the release). Improved Forever's
   Wheel module on, its wheels that would take R3 alone (on R3 alone or with a button
   that's no modifier) given back to the game (R3 alone stays the ping).

@@ -699,7 +699,7 @@ X.keys = function()
   for _, cvar in ipairs({ "GamePadEmulateShift", "GamePadEmulateCtrl", "GamePadEmulateAlt" }) do
     out[#out + 1] = cvar .. "=" .. tostring(GetCVar(cvar))
   end
-  for _, key in ipairs({ "F9", "F10", "F11", "F12" }) do
+  for _, key in ipairs({ "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "PADDUP", "PADDDOWN", "PADDLEFT", "PADDRIGHT" }) do
     for _, prefix in ipairs({ "", "SHIFT-", "CTRL-", "ALT-" }) do
       out[#out + 1] = prefix .. key .. " = " .. tostring(GetBindingAction(prefix .. key, true)) .. " (plain: " .. tostring(GetBindingAction(prefix .. key)) .. ")"
     end

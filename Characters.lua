@@ -18,7 +18,7 @@
 --   * GlowingBars' AFK rainbow and Lueur's gathering switch and "other" glow (per character).
 -- At every login, Easy Controller's bindings a character lacks (per character): the consumables wheel
 -- (paddle 4), the "Quêtes" macro (LT + paddle 4), Improved Forever's emote wheel (LT + paddle 1, by its
--- "Roue emotes" macro), Improved Forever's peek map (LT + paddle 3); Improved
+-- "Roue emotes" macro: moved to the d-pad's up, Paddles.lua), Improved Forever's peek map (LT + paddle 3); Improved
 -- Forever's Wheel module on, its wheels that would take R3 alone back to the game's (R3 alone stays the ping).
 -- Change one of these, or add one: here (and the README's list), never by hand in a single character.
 --------------------------------------------------------------------------------
@@ -51,11 +51,12 @@ local EMOTE_MACRO, EMOTE_BODY = "Roue emotes", "/click ImprovedForeverWheel_emot
 -- plain layer is empty (LT + paddle may come without Shift): the paddle alone is set to Nothing, so only
 -- SHIFT-F11 opens it (the player's choice; an LT + paddle that came without Shift then does nothing))
 local PEEK = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton"
+-- (the emote wheel moved to the d-pad's up (Paddles.lua): LT + paddle 1 given back)
 local EC_MAPPING = { ["TR4:"] = "wheel:consumables", ["TR4:LT"] = "macro:Quêtes",
-	["TR1:LT"] = "macro:" .. EMOTE_MACRO, ["TR3:LT"] = PEEK, ["TR3:"] = "none:none" }
+	["TR3:LT"] = PEEK, ["TR3:"] = "none:none" }
 -- (put by an earlier DeckForever, taken back: the command on LT + paddle 3)
 local EC_GONE = { ["TR3:LT"] = "cmd:CLICK ImprovedForeverWheel_emotes:LeftButton",
-	["TR3:"] = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton" }
+	["TR3:"] = "cmd:CLICK ImprovedForeverPeekMapHold:LeftButton", ["TR1:LT"] = "macro:" .. EMOTE_MACRO }
 
 local function Print(msg) print("|cff66ccffDeckForever|r : " .. msg) end
 

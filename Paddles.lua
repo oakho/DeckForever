@@ -8,6 +8,9 @@
 -- wrapped on it (SecureHandlerWrapScript, the game's own way): the press goes on only while the trigger is
 -- held on the pad (GetGamePadState; or its Shift came), its release with it; anything else does nothing.
 -- Other clicks of the target (its own key, its addon's) go through untouched.
+-- And plain keys of the Steam layout ("Manette WoW": the d-pad in four-buttons mode sends up F8, down F5,
+-- left F7, right F6), bound straight to a target, with priority (no trigger read):
+--   * d-pad up (F8, alone): Improved Forever's emote wheel (its open button: opens, or closes it if it's up)
 --   * LT + paddle 3 (L5, F11): Improved Forever's peek map (its hold button: press shows, release hides).
 --     Validated with the real pad, 2026-11-15 (a keyboard Shift + F11 doesn't show what the pad does).
 --------------------------------------------------------------------------------
@@ -16,6 +19,9 @@ local _, ns = ...
 
 local ROUTES = {
 	{ key = "F11", trigger = "PADLTRIGGER", target = "ImprovedForeverPeekMapHold" },
+}
+local KEYS = {
+	{ key = "F8", target = "ImprovedForeverWheel_emotes" },
 }
 local PREFIXES = { "", "SHIFT-", "CTRL-", "ALT-", "CTRL-SHIFT-", "ALT-SHIFT-" }
 local BUTTON = "DeckForeverPaddle"
@@ -47,6 +53,9 @@ local function Apply()
 	if InCombatLockdown() then pending = true return end
 	pending = nil
 	ClearOverrideBindings(owner)
+	for _, bind in ipairs(KEYS) do
+		if _G[bind.target] then SetOverrideBindingClick(owner, true, bind.key, bind.target, "LeftButton") end
+	end
 	for _, route in ipairs(ROUTES) do
 		local target = _G[route.target]
 		if target and not target:IsForbidden() and C_GamePad and C_GamePad.ButtonBindingToIndex then

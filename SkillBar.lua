@@ -51,6 +51,7 @@ ns.SKILL_PARTS = {
 	{ key = "sticks", label = "L3 / R3 (Easy Controller)" },
 	{ key = "extras", label = "Palettes et pavé tactile (Easy Controller)" },
 	{ key = "pips", label = "Repères de page (LT / RT)" },
+	{ key = "recent", label = "Dernière action de roue (Improved Forever)" },
 	{ key = "ground", label = "Fond sombre" },
 }
 local function Show(key)
@@ -682,6 +683,7 @@ end
 -- the strip's alpha: the game's bar's, as CalmDriver gives it (in a fight full; out of one, its awake level)
 local function Level()
 	if strip.previewUntil and GetTime() < strip.previewUntil then return 1 end    -- (just switched: seen a moment)
+	if DeckForeverDB and DeckForeverDB.skillDev then return 1 end                  -- (dev mode: always shown)
 	if InCombatLockdown() or UnitAffectingCombat("player") then return 1 end
 	local driver = _G.DeckForeverCalmDriver
 	return driver and tonumber(driver:GetAttribute("state-awake")) or 0
@@ -694,7 +696,25 @@ end
 -- Put back where Easy Controller places them once the strip is off; left alone while being placed in its options.
 local EC_SIDES = { left = { "L3", "L4", "L5", "TL1", "TL2", "TL3", "TL4" },
 	right = { "R3", "R4", "R5", "TR1", "TR2", "TR3", "TR4" } }
+local PlaceRecent
 local STICK = { L3 = true, R3 = true }
+-- Improved Forever's wheel slot (its Wheel module's RecentSlot: the last action used from the R3 combo's wheel
+-- held, shown while that combo's trigger is held): it stands beside the game's bar, hidden under ours. Put
+-- beside the strip's left end (L3's place, which isn't shown), at the strip's alpha. Improved Forever sets its
+-- place again only when its own choice changes (it remembers it): ours stays. Hidden if turned off.
+PlaceRecent = function()
+	local slot = _G.ImprovedForeverRecentSlot
+	if not slot or slot.editing then return end
+	if not Show("recent") then slot:SetAlpha(0) return end
+	local ratio = strip:GetEffectiveScale() / slot:GetEffectiveScale()
+	local _, relative, _, x = slot:GetPoint(1)
+	local want = -(TILE + GAP + 6) * ratio
+	if relative ~= tiles.left[1] or not x or math.abs(x - want) > 0.5 then
+		slot:ClearAllPoints()
+		slot:SetPoint("CENTER", tiles.left[1], "CENTER", want, 0)
+	end
+	slot:SetAlpha(strip:GetAlpha())
+end
 local ecHooked, ecMoved
 local function PlaceExtras()
 	local P = rawget(_G, "ControllerKeyboard") and ControllerKeyboard.Paddles
@@ -710,7 +730,10 @@ local function PlaceExtras()
 			for _, ids in pairs(EC_SIDES) do
 				for _, id in ipairs(ids) do
 					local b = f.buttons[id]
-					if b and not Show(STICK[id] and "sticks" or "extras") then b:SetAlpha(0) b:EnableMouse(false) end
+					-- (and one showing Easy Controller's "Nothing": a no-entry sign, no use on the bar)
+					if b and (not Show(STICK[id] and "sticks" or "extras") or b.action == "none:none") then
+						b:SetAlpha(0) b:EnableMouse(false)
+					end
 				end
 			end
 		end)
@@ -721,13 +744,14 @@ local function PlaceExtras()
 	end
 	if P.placing then return end
 	ecMoved = true
+	PlaceRecent()
 	for side, ids in pairs(EC_SIDES) do
 		local sign = side == "left" and -1 or 1
 		local edge = side == "left" and tiles.left[1] or tiles.right[4]
 		local n = 0
 		for _, id in ipairs(ids) do
 			local b = f.buttons[id]
-			if b and b:IsShown() and b:GetAlpha() > 0 and Show(STICK[id] and "sticks" or "extras") then
+			if b and b:IsShown() and b:GetAlpha() > 0 and b.action ~= "none:none" and Show(STICK[id] and "sticks" or "extras") then
 				n = n + 1
 				local ratio = strip:GetEffectiveScale() / b:GetEffectiveScale()
 				b:ClearAllPoints()
@@ -776,6 +800,7 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 	for _, p in ipairs(pips) do p:SetShown(Show("pips")) end
 	if pu then Pips(pu, bar) end
 	if round:IsShown() then Health() end
+	pcall(PlaceRecent)
 	strip.extrasWait = (strip.extrasWait or 0) - 1
 	if strip.extrasWait <= 0 then strip.extrasWait = 15 PlaceExtras() end
 end)
@@ -815,6 +840,13 @@ function ns.CycleSkillBar()
 	Apply()
 	print(("DeckForever : barre horizontale %s."):format(({ round = "avec le rond", gap = "avec un espace",
 		off = "désactivée" })[DeckForeverDB.skillBar]))
+end
+
+-- Dev mode: the strip always fully shown (out of a fight too), to look at it without pressing anything
+function ns.ToggleSkillDev()
+	DeckForeverDB = DeckForeverDB or {}
+	DeckForeverDB.skillDev = not DeckForeverDB.skillDev or nil
+	print(("DeckForever : barre horizontale, mode dev %s."):format(DeckForeverDB.skillDev and "on" or "off"))
 end
 
 function ns.ToggleSkillStyle()

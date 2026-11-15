@@ -713,9 +713,10 @@ do
 end
 
 -- Dev keys, CTRL-SHIFT-Fn (no typing: the AZERTY keyboard under xdotool turns letters into game shortcuts when the
--- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload, HOME = /dgx party. Override bindings, out of combat.
+-- chat line isn't open yet): F9 = /dgx pv, F10 = /dgx deck, F11 = /reload, HOME = /dgx party, PAGEUP = DeckForever's skill bar dev mode. Override bindings, out of combat.
 do
-  local keys = { F9 = function() X.pv() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.rd() end, F12 = function() X.pd() end, F10 = function() X.deck() end, HOME = function() X.party() end }
+  local keys = { F9 = function() X.pv() end, F11 = function() ReloadUI() end, F8 = function() X.nw() end, F7 = function() X.wp() end, F6 = function() X.gp() end, F5 = function() X.sn() end, F4 = function() X.tt() end, F3 = function() X.wu() end, F2 = function() X.ca() end, F1 = function() X.rd() end, F12 = function() X.pd() end, F10 = function() X.deck() end, HOME = function() X.party() end,
+    PAGEUP = function() if SlashCmdList.DECKFOREVER then SlashCmdList.DECKFOREVER("dev") end end }
   local owner = CreateFrame("Frame")
   owner:RegisterEvent("PLAYER_ENTERING_WORLD")
   owner:SetScript("OnEvent", function()

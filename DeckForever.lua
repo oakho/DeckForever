@@ -996,6 +996,8 @@ SlashCmdList.DECKFOREVER = function(msg)
 		ns.CycleSkillBar()
 	elseif msg == "style" then
 		ns.ToggleSkillStyle()
+	elseif msg == "dev" then
+		ns.ToggleSkillDev()
 	elseif msg == "options" or msg == "config" then
 		ns.OpenOptions()
 	else

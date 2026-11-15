@@ -18,3 +18,4 @@ Gamepad.lua
 SkillBar.lua
 Placements.lua
 Characters.lua
+Options.lua

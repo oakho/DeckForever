@@ -41,6 +41,22 @@ local function Mode()
 	local mode = DeckForeverDB and DeckForeverDB.skillBar
 	return (mode == "round" or mode == "gap") and mode or nil
 end
+-- What's shown round the two groups (DeckForeverDB.skillShow, the options panel: Options.lua): every part
+-- on unless turned off. Hidden, it's only our picture that goes: the game's buttons and Easy Controller's
+-- still take their presses.
+ns.SKILL_PARTS = {
+	{ key = "shoulders", label = "Marques de ciblage LB / RB" },
+	{ key = "class", label = "Actions de classe" },
+	{ key = "prompts", label = "Glyphes des actions de classe" },
+	{ key = "sticks", label = "L3 / R3 (Easy Controller)" },
+	{ key = "extras", label = "Palettes et pavé tactile (Easy Controller)" },
+	{ key = "pips", label = "Repères de page (LT / RT)" },
+	{ key = "ground", label = "Fond sombre" },
+}
+local function Show(key)
+	local show = DeckForeverDB and DeckForeverDB.skillShow
+	return not (show and show[key] == false)
+end
 local function PageUnit()
 	local main = _G.GamepadMainActionBarFrame
 	return main and main.PageUnit
@@ -678,6 +694,7 @@ end
 -- Put back where Easy Controller places them once the strip is off; left alone while being placed in its options.
 local EC_SIDES = { left = { "L3", "L4", "L5", "TL1", "TL2", "TL3", "TL4" },
 	right = { "R3", "R4", "R5", "TR1", "TR2", "TR3", "TR4" } }
+local STICK = { L3 = true, R3 = true }
 local ecHooked, ecMoved
 local function PlaceExtras()
 	local P = rawget(_G, "ControllerKeyboard") and ControllerKeyboard.Paddles
@@ -686,7 +703,16 @@ local function PlaceExtras()
 	if not ecHooked then
 		ecHooked = true
 		f:HookScript("OnUpdate", function()
-			if strip:IsShown() and not P.placing then f:SetAlpha(strip:GetAlpha()) end
+			if not strip:IsShown() or P.placing then return end
+			f:SetAlpha(strip:GetAlpha())
+			-- (those turned off in our options: not drawn, the input still theirs; right after Easy
+			-- Controller's own Refresh, which shows them again)
+			for _, ids in pairs(EC_SIDES) do
+				for _, id in ipairs(ids) do
+					local b = f.buttons[id]
+					if b and not Show(STICK[id] and "sticks" or "extras") then b:SetAlpha(0) b:EnableMouse(false) end
+				end
+			end
 		end)
 	end
 	if not strip:IsShown() then
@@ -701,7 +727,7 @@ local function PlaceExtras()
 		local n = 0
 		for _, id in ipairs(ids) do
 			local b = f.buttons[id]
-			if b and b:IsShown() and b:GetAlpha() > 0 then
+			if b and b:IsShown() and b:GetAlpha() > 0 and Show(STICK[id] and "sticks" or "extras") then
 				n = n + 1
 				local ratio = strip:GetEffectiveScale() / b:GetEffectiveScale()
 				b:ClearAllPoints()
@@ -725,17 +751,21 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 			Mirror(t, cluster and cluster["ActionButton" .. t.native])
 		end
 		local native = pu and (side == "left" and pu.LeftClassAction or pu.RightClassAction)
-		local on = native ~= nil and native:IsShown()
+		local on = native ~= nil and native:IsShown() and Show("class")
 		class[side]:SetShown(on)
 		if on then Mirror(class[side], native) end
 		local prompt = pu and (side == "left" and pu.LeftInputPrompt or pu.RightInputPrompt)
-		prompts[side]:SetShown(on)
-		if on and prompt then Clone(prompts[side], prompt) end
-		local k = pu and pu:GetEffectiveScale() / strip:GetEffectiveScale() or 1
-		for _, o in ipairs(shoulders[side].layers) do CopyTexture(o, pu and pu[o.key], k) end
+		local promptOn = on and Show("prompts")
+		prompts[side]:SetShown(promptOn)
+		if promptOn and prompt then Clone(prompts[side], prompt) end
+		shoulders[side]:SetShown(Show("shoulders"))
+		if Show("shoulders") then
+			local k = pu and pu:GetEffectiveScale() / strip:GetEffectiveScale() or 1
+			for _, o in ipairs(shoulders[side].layers) do CopyTexture(o, pu and pu[o.key], k) end
+		end
 	end
 	if (class.left:IsShown() and class.right:IsShown()) ~= strip.both then Layout() end
-	local focus = bar and bar.BackgroundFocus
+	local focus = Show("ground") and bar and bar.BackgroundFocus
 	if focus then
 		local k = focus:GetEffectiveScale() / strip:GetEffectiveScale()
 		local _, h = focus:GetSize()
@@ -743,6 +773,7 @@ strip:SetScript("OnUpdate", function(_, elapsed)
 	else
 		ground:Hide()
 	end
+	for _, p in ipairs(pips) do p:SetShown(Show("pips")) end
 	if pu then Pips(pu, bar) end
 	if round:IsShown() then Health() end
 	strip.extrasWait = (strip.extrasWait or 0) - 1
@@ -770,6 +801,11 @@ local function Apply()
 	PlaceExtras()
 end
 ns.ApplySkillBar = Apply
+-- (a setting changed in the options: laid out again, seen a moment)
+function ns.SkillBarChanged()
+	strip.previewUntil = GetTime() + 4
+	Apply()
+end
 
 local NEXT = { [""] = "round", round = "gap", gap = "off", off = "round" }
 function ns.CycleSkillBar()

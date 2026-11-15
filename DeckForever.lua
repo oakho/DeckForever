@@ -996,8 +996,10 @@ SlashCmdList.DECKFOREVER = function(msg)
 		ns.CycleSkillBar()
 	elseif msg == "style" then
 		ns.ToggleSkillStyle()
+	elseif msg == "options" or msg == "config" then
+		ns.OpenOptions()
 	else
-		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat · /df camera : profil caméra DynamicCam · /df skill : barre horizontale (rond, espace, off) · /df style : son style (plat, Blizzard).")
+		Print("/df go : disposition « " .. TARGET_LAYOUT .. " » · /df back : retour à « " .. (DeckForeverDB.previous or SOURCE_LAYOUT) .. " » · /df fx : aperçu combat · /df camera : profil caméra DynamicCam · /df skill : barre horizontale (rond, espace, off) · /df style : son style (plat, Blizzard) · /df options : les options.")
 	end
 end
 

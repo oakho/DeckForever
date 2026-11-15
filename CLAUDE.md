@@ -4,6 +4,7 @@ WoW addon fitting the HUD to the Steam Deck (1280×800), on top of Blizzard's ga
 Controller. Client: WoW Forever / classic beta, Interface 16001, played with a gamepad in Game Mode.
 User-facing strings are French; code and comments are English.
 
+- `Options.lua`: DeckForever's panel in the game's settings (AddOns > DeckForever, `/df options`): the skill bar (`SkillBar.lua`), on, look, parts shown.
 - `DeckForever.lua`: the Edit Mode layout (`LAYOUT`, written by `/df go`), the frames placed by hand
   (minimap, chat, tooltip, quests, class action), the fader (combat mode, `FADED`), the secure state
   driver (`CalmDriver`), the XP bar, fonts.

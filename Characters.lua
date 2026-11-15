@@ -318,6 +318,13 @@ local function Wheels()
 		if IF and IF.ApplyRingBindings then pcall(IF.ApplyRingBindings) end
 		Print("roues d'Improved Forever sur R3 rendues au jeu (le ping reste sur R3).")
 	end
+	-- (its "Use on release", as the game's own wheel: let go of the stick to use the slot, R2 closes. Turned
+	-- on once (DeckForeverDB.ringReleaseSet): the player may turn it off in Improved Forever's Wheels page)
+	local IF = rawget(_G, "ImprovedForever")
+	if not DeckForeverDB.ringReleaseSet and IF and IF.SetRingRelease then
+		DeckForeverDB.ringReleaseSet = true
+		if not db.ringRelease then pcall(IF.SetRingRelease, true) Print("roues : utilisation au relâchement du stick.") end
+	end
 end
 
 local function CharacterSettings()

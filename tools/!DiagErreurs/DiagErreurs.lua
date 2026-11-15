@@ -36,6 +36,8 @@ local function Rect(f)
 	local ok, l, b, w, h = pcall(f.GetRect, f)
 	if not ok or not l then return end
 	local es = f:GetEffectiveScale()
+	-- (in combat some frames' rectangles are secrets: skipped)
+	if issecretvalue and (issecretvalue(l) or issecretvalue(b) or issecretvalue(w) or issecretvalue(h) or issecretvalue(es)) then return end
 	return math.floor(l * es + 0.5), math.floor(b * es + 0.5), math.floor(w * es + 0.5), math.floor(h * es + 0.5)
 end
 local function Survey()
